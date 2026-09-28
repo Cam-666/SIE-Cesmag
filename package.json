@@ -1,0 +1,12 @@
+{
+  "name": "sie-cesmag",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Raíz del proyecto SIE CESMAG — solo orquesta sie-cesmag-f (frontend) y sie-cesmag-api (backend) para desarrollo. Cada uno sigue siendo un proyecto independiente, con su propio package.json.",
+  "scripts": {
+    "dev": "concurrently -n API,WEB -c blue,magenta \"pnpm --dir sie-cesmag-api run dev\" \"pnpm --dir sie-cesmag-f run dev\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

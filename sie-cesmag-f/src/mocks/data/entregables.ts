@@ -1,0 +1,131 @@
+import type { EntregableDetalle } from "@/domain/entregable/types"
+import { persistir } from "@/mocks/storage"
+
+export interface EntregableMock extends Omit<EntregableDetalle, "idEmprendimientoFase"> {
+  idEmprendimiento: number
+  idFase: number
+}
+
+export const ENTREGABLES: EntregableMock[] = persistir("entregables", [
+  {
+    idEntregable: 1,
+    idEmprendimiento: 124,
+    idFase: 3,
+    emprendimiento: "EcoPack Solutions",
+    faseNombre: "3. Definición del Reto",
+    titulo: "Declaración de reto estructurada.pdf",
+    descripcion: "POV + HMW y mapa de actores del ecosistema del problema.",
+    fechaPrevista: "2026-08-20",
+    estadoActividad: "entregado",
+    intentos: [
+      {
+        idIntentoEntrega: 1,
+        idEntregable: 1,
+        rutaEvidencia: "https://drive.google.com/evidencia-1",
+        nombreArchivo: "Declaración de reto estructurada.pdf",
+        fechaEntrega: "2026-08-19T10:00:00",
+        estadoRevision: "aprobado",
+        observaciones: "Declaración de reto clara y bien sustentada.",
+      },
+    ],
+  },
+  {
+    idEntregable: 2,
+    idEmprendimiento: 124,
+    idFase: 4,
+    emprendimiento: "EcoPack Solutions",
+    faseNombre: "4. Ideación Estratégica",
+    titulo: "Top 3 ideas seleccionadas.pdf",
+    descripcion: "Top 3 ideas con sustento metodológico y concepto de solución elegido.",
+    fechaPrevista: "2026-09-20",
+    estadoActividad: "entregado",
+    intentos: [
+      {
+        idIntentoEntrega: 2,
+        idEntregable: 2,
+        rutaEvidencia: "https://drive.google.com/evidencia-2-v1",
+        nombreArchivo: "Top 3 ideas seleccionadas (v1).pdf",
+        fechaEntrega: "2026-09-10T09:00:00",
+        estadoRevision: "rechazado",
+        observaciones: "Falta sustento metodológico (matriz impacto/viabilidad) en las ideas descartadas.",
+      },
+      {
+        idIntentoEntrega: 3,
+        idEntregable: 2,
+        rutaEvidencia: "https://drive.google.com/evidencia-2-v2",
+        nombreArchivo: "Top 3 ideas seleccionadas (v2).pdf",
+        fechaEntrega: "2026-09-15T11:00:00",
+        estadoRevision: "pendiente",
+        observaciones: null,
+      },
+    ],
+  },
+  {
+    idEntregable: 3,
+    idEmprendimiento: 116,
+    idFase: 6,
+    emprendimiento: "Diseño & Estilo",
+    faseNombre: "6. Validación Real",
+    titulo: "Informe de validación.pdf",
+    descripcion: "Informe de validación con % de aceptación y decisión de continuar/pivotar/discontinuar.",
+    fechaPrevista: "2026-09-25",
+    estadoActividad: "pendiente",
+    intentos: [],
+  },
+  {
+    idEntregable: 4,
+    idEmprendimiento: 107,
+    idFase: 9,
+    emprendimiento: "Green Energy",
+    faseNombre: "9. Preparación para el Mercado",
+    titulo: "Pitch deck.pptx",
+    descripcion: "Pitch deck de 10 diapositivas + video pitch de 3 minutos.",
+    fechaPrevista: "2026-06-25",
+    estadoActividad: "entregado",
+    intentos: [
+      {
+        idIntentoEntrega: 4,
+        idEntregable: 4,
+        rutaEvidencia: "https://drive.google.com/evidencia-4",
+        nombreArchivo: "Pitch deck.pptx",
+        fechaEntrega: "2026-06-24T15:00:00",
+        estadoRevision: "rechazado",
+        observaciones: "El pitch deck no incluye proyección financiera ni evidencia de primeras ventas.",
+      },
+    ],
+  },
+  {
+    idEntregable: 5,
+    idEmprendimiento: 118,
+    idFase: 7,
+    emprendimiento: "PetConnect",
+    faseNombre: "7. Modelamiento Empresarial",
+    titulo: "Canvas validado.pdf",
+    descripcion: "Business Model Canvas con evidencias de usuarios + análisis de mercado.",
+    fechaPrevista: "2026-09-05",
+    estadoActividad: "entregado",
+    intentos: [
+      {
+        idIntentoEntrega: 5,
+        idEntregable: 5,
+        rutaEvidencia: "https://drive.google.com/evidencia-5",
+        nombreArchivo: "Canvas validado.pdf",
+        fechaEntrega: "2026-09-04T14:00:00",
+        estadoRevision: "aprobado",
+        observaciones: "Canvas completo y consistente con las entrevistas realizadas.",
+      },
+    ],
+  },
+  {
+    idEntregable: 6,
+    idEmprendimiento: 124,
+    idFase: 5,
+    emprendimiento: "EcoPack Solutions",
+    faseNombre: "5. Prototipado Rápido",
+    titulo: "Prototipo de baja fidelidad",
+    descripcion: "Prototipo físico o digital de baja/media fidelidad + guía de prueba con usuarios.",
+    fechaPrevista: "2026-09-28",
+    estadoActividad: "pendiente",
+    intentos: [],
+  },
+])
