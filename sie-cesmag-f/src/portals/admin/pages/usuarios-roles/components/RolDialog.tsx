@@ -186,12 +186,6 @@ export function RolDialog({ rol }: RolDialogProps) {
                 </tbody>
               </table>
             </div>
-            <p className="mt-1.5 text-xs text-muted-foreground">
-              "—" indica que la acción no aplica a ese módulo (p. ej. Dashboard y Reportes son de
-              solo lectura). "Eliminar" en Emprendimientos controla quitar un integrante, no
-              borrar el emprendimiento en sí — eso no existe como acción, solo se desactiva o
-              marca como terminado.
-            </p>
           </div>
 
           <DialogFooter>

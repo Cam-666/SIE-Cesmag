@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -63,10 +62,6 @@ export function NuevoEmprendimientoDialog() {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Nuevo emprendimiento</DialogTitle>
-          <DialogDescription>
-            Si la persona no tiene cuenta todavía, se creará y definirá su contraseña desde el
-            enlace de acceso.
-          </DialogDescription>
         </DialogHeader>
         <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)} noValidate>
           <div className="flex flex-col gap-1.5">
@@ -93,10 +88,6 @@ export function NuevoEmprendimientoDialog() {
             <Input id="correo" type="email" {...register("correo")} />
             {errors.correo && <p className="text-xs text-destructive-700">{errors.correo.message}</p>}
           </div>
-          <p className="text-xs text-muted-foreground">
-            Si ya existe alguien con ese número de identificación, se usan sus datos y se ignoran
-            el nombre y el correo escritos aquí.
-          </p>
           <DialogFooter>
             <Button type="submit" disabled={crearEmprendimiento.isPending}>
               {crearEmprendimiento.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
