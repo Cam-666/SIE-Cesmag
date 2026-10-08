@@ -26,10 +26,8 @@ base de datos real. Puedes iniciar sesión con:
 | Portal | Correo | Contraseña |
 |---|---|---|
 | Administrativo (Vicerrector / Coordinador / Empleado) | `coordinador@unicesmag.edu.co` | `cesmag123` |
-| Emprendedor | `jperez@unicesmag.edu.co` | `cesmag123` |
 
-Estas credenciales también aparecen como recordatorio directamente en la pantalla de Login
-mientras el proyecto está en modo desarrollo.
+
 
 Para apuntar en cambio al backend real (`sie-cesmag-b`), copia `.env.example` a
 `.env.local` y ajusta:

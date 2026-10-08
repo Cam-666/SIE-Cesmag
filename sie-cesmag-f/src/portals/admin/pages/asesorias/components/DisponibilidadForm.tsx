@@ -79,13 +79,6 @@ export function DisponibilidadForm() {
     <Card>
       <CardHeader>
         <CardTitle>Mi disponibilidad</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Defina el rango de fecha y hora en que puede recibir emprendedores — p. ej. de 8:00 a
-          12:00. Quien agende elegirá la hora de inicio y la duración de su asesoría (15 a 60 min)
-          dentro de ese rango, en vez de reservarlo completo de una sola vez. Toque un bloque del
-          calendario para gestionarlo. Solo se puede configurar disponibilidad para el mes actual
-          (desde el día 20, también para el siguiente).
-        </p>
       </CardHeader>
       <CardContent className="gap-4">
         {puedeAnadir && (
@@ -128,15 +121,6 @@ export function DisponibilidadForm() {
             )}
           </div>
         )}
-
-        <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-          {(Object.keys(COLOR_POR_ESTADO) as EstadoAgenda[]).map((estado) => (
-            <span key={estado} className="flex items-center gap-1.5">
-              <span className={`size-2.5 rounded-full border ${COLOR_POR_ESTADO[estado]}`} />
-              {ESTADO_AGENDA_BADGE[estado].label}
-            </span>
-          ))}
-        </div>
 
         {agenda.isPending && <Skeleton className="h-64 w-full" />}
 
