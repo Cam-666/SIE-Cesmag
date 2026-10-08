@@ -29,4 +29,6 @@ export interface SesionUsuario {
   /** Permisos por módulo. Vacío para sesiones del portal del emprendedor. */
   permisos: PermisoModulo[]
   token: string
+  /** Para renovar `token` cuando expira (típicamente a la hora), sin pedir contraseña de nuevo. */
+  refreshToken: string
 }

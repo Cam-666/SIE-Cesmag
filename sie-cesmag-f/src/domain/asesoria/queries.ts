@@ -7,6 +7,7 @@ import {
   listarAsesorias,
   listarAsesoriasPorEmprendimiento,
   listarMisAsesorias,
+  listarMisAsesoriasComoAsesor,
   registrarResultadoAsesoria,
 } from "@/domain/asesoria/api"
 import type { FiltrosAsesorias } from "@/domain/asesoria/types"
@@ -70,6 +71,11 @@ export function useEliminarAsesoriaMutation() {
 /** Asesorías del emprendimiento del emprendedor autenticado. */
 export function useMisAsesoriasQuery() {
   return useQuery({ queryKey: ["asesorias", "mias"], queryFn: listarMisAsesorias })
+}
+
+/** Asesorías propias del usuario administrativo autenticado, como asesor — para "Mi calendario". */
+export function useMisAsesoriasComoAsesorQuery() {
+  return useQuery({ queryKey: ["asesorias", "mias-asesor"], queryFn: listarMisAsesoriasComoAsesor })
 }
 
 /** El emprendedor agenda dentro de un bloque disponible. */

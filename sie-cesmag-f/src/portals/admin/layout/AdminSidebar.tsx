@@ -23,7 +23,7 @@ export function AdminSidebar({ mobileOpen, onMobileOpenChange }: AdminSidebarPro
 
   return (
     <>
-      <aside className="group hidden w-18 shrink-0 flex-col overflow-hidden bg-primary-900 text-white transition-[width] duration-200 ease-in-out hover:w-64 md:flex">
+      <aside className="group hidden w-18 shrink-0 flex-col overflow-hidden bg-primary-900 text-white transition-[width] duration-200 ease-in-out hover:w-64 md:flex print:hidden">
         <div className="flex items-center gap-2.5 px-4.5 py-5">
           <img src={escudoCesmag} alt="Escudo Universidad CESMAG" className="h-9 w-9 shrink-0" />
           <div className="min-w-0 leading-tight opacity-0 transition-opacity delay-75 duration-150 group-hover:opacity-100">

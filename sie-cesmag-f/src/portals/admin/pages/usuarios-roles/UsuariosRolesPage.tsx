@@ -109,6 +109,7 @@ export function UsuariosRolesPage() {
                       {puedeEliminar && (
                         <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                           {String(usuario.idUsuario) !== idUsuarioActual &&
+                            usuario.rol?.ambito !== "emprendedor" &&
                             !IDS_ROL_PROTEGIDO.includes(usuario.idRol) && (
                               <ConfirmarEliminarDialog
                                 titulo="Eliminar usuario"

@@ -66,7 +66,7 @@ export function EditarIntegranteDialog({
           <Pencil className="size-3.5" />
         </button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Editar integrante</DialogTitle>
           <DialogDescription>Corrija el nombre del integrante.</DialogDescription>

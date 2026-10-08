@@ -30,9 +30,16 @@ export const crearEmprendimientoSchema = z.object({
 
 export type CrearEmprendimientoFormValues = z.infer<typeof crearEmprendimientoSchema>
 
-/** Datos para agregar un integrante al emprendimiento. */
+/**
+ * Datos para agregar un integrante al emprendimiento. `nombre`/`correo` solo
+ * hacen falta cuando la persona no existe todavía en el sistema (no llenó la
+ * encuesta ni tiene cuenta) — el backend responde 404 pidiéndolos en ese
+ * caso, y el diálogo los revela recién entonces.
+ */
 export const agregarIntegranteSchema = z.object({
   numeroIdentificacion: z.string().min(1, "Ingrese el número de identificación."),
+  nombre: z.string().min(1, "Ingrese el nombre.").optional(),
+  correo: z.string().email("Correo inválido.").optional(),
 })
 
 export type AgregarIntegranteFormValues = z.infer<typeof agregarIntegranteSchema>

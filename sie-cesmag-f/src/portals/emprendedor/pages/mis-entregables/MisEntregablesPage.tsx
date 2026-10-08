@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useSearchParams } from "react-router-dom"
 import { format } from "date-fns"
 import { AlertTriangle, FileCheck2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -45,7 +46,11 @@ function coincideFiltro(entregable: MiEntregableListado, filtro: Filtro) {
 /** Consultar los entregables asignados y cargar la evidencia correspondiente. */
 export function MisEntregablesPage() {
   const [filtro, setFiltro] = useState<Filtro>("todos")
-  const [idSeleccionado, setIdSeleccionado] = useState<number | null>(null)
+  const [searchParams] = useSearchParams()
+  const [idSeleccionado, setIdSeleccionado] = useState<number | null>(() => {
+    const idEntregable = searchParams.get("idEntregable")
+    return idEntregable ? Number(idEntregable) : null
+  })
   const { data, isPending, isError } = useMisEntregablesQuery()
 
   const filtrados = data?.filter((e) => coincideFiltro(e, filtro))
@@ -116,7 +121,7 @@ export function MisEntregablesPage() {
                       size="sm"
                       onClick={() => setIdSeleccionado(entregable.idEntregable)}
                     >
-                      {entregable.estado === "aprobado" ? "Ver" : "Entregar"}
+                      Ver
                     </Button>
                   </TableCell>
                 </TableRow>

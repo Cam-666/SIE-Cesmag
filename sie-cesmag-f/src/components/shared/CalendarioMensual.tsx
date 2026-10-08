@@ -21,6 +21,9 @@ interface CalendarioMensualProps {
   fechasConEvento: Set<string>
   fechaSeleccionada: string | null
   onSeleccionarFecha: (fecha: string) => void
+  /** Si vienen, deshabilita navegar (y seleccionar día) fuera de este rango "yyyy-MM-dd". */
+  fechaMinima?: string
+  fechaMaxima?: string
 }
 
 const DIAS_CABECERA = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
@@ -32,10 +35,17 @@ export function CalendarioMensual({
   fechasConEvento,
   fechaSeleccionada,
   onSeleccionarFecha,
+  fechaMinima,
+  fechaMaxima,
 }: CalendarioMensualProps) {
   const inicioMalla = startOfWeek(startOfMonth(mes), { weekStartsOn: 1 })
   const finMalla = endOfWeek(endOfMonth(mes), { weekStartsOn: 1 })
   const dias = eachDayOfInterval({ start: inicioMalla, end: finMalla })
+
+  const finDelMesAnterior = format(subMonths(endOfMonth(mes), 1), "yyyy-MM-dd")
+  const inicioDelMesSiguiente = format(addMonths(startOfMonth(mes), 1), "yyyy-MM-dd")
+  const noHayMesAnterior = fechaMinima !== undefined && finDelMesAnterior < fechaMinima
+  const noHayMesSiguiente = fechaMaxima !== undefined && inicioDelMesSiguiente > fechaMaxima
 
   return (
     <div>
@@ -49,6 +59,7 @@ export function CalendarioMensual({
             variant="ghost"
             size="icon"
             aria-label="Mes anterior"
+            disabled={noHayMesAnterior}
             onClick={() => onCambiarMes(subMonths(mes, 1))}
           >
             <ChevronLeft className="size-4" />
@@ -58,6 +69,7 @@ export function CalendarioMensual({
             variant="ghost"
             size="icon"
             aria-label="Mes siguiente"
+            disabled={noHayMesSiguiente}
             onClick={() => onCambiarMes(addMonths(mes, 1))}
           >
             <ChevronRight className="size-4" />
@@ -79,15 +91,17 @@ export function CalendarioMensual({
           const dentroDelMes = isSameMonth(dia, mes)
           const tieneEvento = fechasConEvento.has(fechaStr)
           const seleccionado = fechaSeleccionada === fechaStr
+          const fueraDeRango = (fechaMinima !== undefined && fechaStr < fechaMinima) || (fechaMaxima !== undefined && fechaStr > fechaMaxima)
 
           return (
             <button
               key={fechaStr}
               type="button"
+              disabled={fueraDeRango}
               onClick={() => onSeleccionarFecha(fechaStr)}
               className={`flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg text-sm transition-colors ${
-                !dentroDelMes ? "text-muted-foreground/40" : "text-foreground"
-              } ${seleccionado ? "bg-primary-700 text-white" : "hover:bg-muted"} ${
+                fueraDeRango ? "cursor-not-allowed text-muted-foreground/25" : !dentroDelMes ? "text-muted-foreground/40" : "text-foreground"
+              } ${seleccionado ? "bg-primary-700 text-white" : fueraDeRango ? "" : "hover:bg-muted"} ${
                 isToday(dia) && !seleccionado ? "font-semibold text-primary-700" : ""
               }`}
             >

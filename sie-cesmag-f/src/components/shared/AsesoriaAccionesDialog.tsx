@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { fechaAsesoriaComoLocal } from "@/lib/fecha-asesoria"
 import { Badge } from "@/components/ui/badge"
 import {
   Select,
@@ -77,7 +78,7 @@ export function AsesoriaAccionesDialog({ asesoria, onOpenChange }: AsesoriaAccio
   // Reprogramar respeta la disponibilidad real: el admin elige entre su
   // propia agenda; el emprendedor, entre la de todo el equipo (coordinador,
   // vicerrector o empleado que tenga el horario).
-  const miAgenda = useMiAgendaQuery()
+  const miAgenda = useMiAgendaQuery(ambito === "admin")
   const agendaAsesores = useAgendaAsesorQuery()
   const bloquesParaReprogramar =
     ambito === "admin" ? miAgenda.data?.filter((b) => b.estado !== "reservado") : agendaAsesores.data
@@ -156,7 +157,7 @@ export function AsesoriaAccionesDialog({ asesoria, onOpenChange }: AsesoriaAccio
             <div>
               <p className="text-xs text-muted-foreground">Fecha y hora</p>
               <p className="font-medium text-foreground">
-                {format(new Date(asesoria.fechaAsesoria), "d/MM/yyyy h:mm a", { locale: es })}
+                {format(fechaAsesoriaComoLocal(asesoria.fechaAsesoria), "d/MM/yyyy h:mm a", { locale: es })}
               </p>
             </div>
             <div>

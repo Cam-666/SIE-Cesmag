@@ -168,6 +168,7 @@ export const emprendimientosHandlers = [
       avance: body.situacionActual,
       observaciones: null,
       idAgenda: null,
+      duracionMinutos: 30,
     })
 
     return HttpResponse.json(emprendimiento)

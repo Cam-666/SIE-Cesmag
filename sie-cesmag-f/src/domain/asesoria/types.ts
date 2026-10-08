@@ -13,6 +13,10 @@ export type ModalidadAsesoria = "presencial" | "virtual"
  */
 export type EstadoAsesoria = "programada" | "completada" | "cancelada" | "no_realizada"
 
+/** Duraciones de asesoría que tiene sentido ofrecer — igual que `DURACIONES_ASESORIA_MINUTOS` del backend. Máximo 1 hora. */
+export const DURACIONES_ASESORIA_MINUTOS = [15, 30, 45, 60] as const
+export type DuracionAsesoriaMinutos = (typeof DURACIONES_ASESORIA_MINUTOS)[number]
+
 /** Actividad/compromiso asignado durante una asesoría (wireframe "Detalle de Asesoría"). */
 export interface ActividadAsesoria {
   descripcion: string
@@ -64,6 +68,8 @@ export interface AsesoriaListado {
   observaciones: string | null
   /** Bloque de agenda del que se originó (null en registros antiguos sin agenda asociada). */
   idAgenda: Id | null
+  /** Duración real de la cita (del bloque de agenda del que se originó) — para el calendario semanal. */
+  duracionMinutos: number
 }
 
 export interface FiltrosAsesorias {
@@ -78,6 +84,7 @@ export interface FiltrosAsesorias {
 export interface NuevaAsesoriaPayload {
   idEmprendimiento: Id
   idAgenda: Id
+  duracionMinutos: DuracionAsesoriaMinutos
   tipoAsesoria: TipoAsesoria
   modalidad: ModalidadAsesoria
   etapaIdentificada?: number | null
@@ -94,7 +101,9 @@ export interface CancelarReprogramarPayload {
 /** El emprendedor agenda dentro de un bloque disponible de la agenda del coordinador. */
 export interface AgendarAsesoriaPayload {
   idAgenda: Id
+  duracionMinutos: DuracionAsesoriaMinutos
   tipoAsesoria: TipoAsesoria
+  modalidad: ModalidadAsesoria
   motivo: string
 }
 

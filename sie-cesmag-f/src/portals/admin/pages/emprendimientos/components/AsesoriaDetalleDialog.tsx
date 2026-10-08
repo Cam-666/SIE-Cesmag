@@ -4,6 +4,7 @@ import { Check, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import type { AsesoriaHistorialItem } from "@/domain/asesoria/types"
+import { fechaAsesoriaComoLocal } from "@/lib/fecha-asesoria"
 
 interface AsesoriaDetalleDialogProps {
   asesoria: AsesoriaHistorialItem | null
@@ -39,7 +40,7 @@ export function AsesoriaDetalleDialog({
                 <div>
                   <p className="text-xs text-muted-foreground">Fecha y hora</p>
                   <p className="font-medium text-foreground">
-                    {format(new Date(asesoria.fechaAsesoria), "d/MM/yyyy h:mm a", { locale: es })}
+                    {format(fechaAsesoriaComoLocal(asesoria.fechaAsesoria), "d/MM/yyyy h:mm a", { locale: es })}
                   </p>
                 </div>
               </div>

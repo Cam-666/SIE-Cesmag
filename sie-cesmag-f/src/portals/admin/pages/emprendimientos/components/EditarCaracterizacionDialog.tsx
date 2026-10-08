@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
+import { Controller, useForm } from "react-hook-form"
 import { Loader2, Pencil } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { TagsInput } from "@/components/shared/TagsInput"
 import {
   caracterizacionSchema,
   type CaracterizacionFormValues,
@@ -36,7 +37,7 @@ export function EditarCaracterizacionDialog({
   const [open, setOpen] = useState(false)
   const editar = useEditarCaracterizacionMutation(idEmprendimiento)
 
-  const { register, handleSubmit } = useForm<CaracterizacionFormValues>({
+  const { register, control, handleSubmit } = useForm<CaracterizacionFormValues>({
     resolver: zodResolver(caracterizacionSchema),
     defaultValues: {
       ...valoresActuales,
@@ -86,7 +87,17 @@ export function EditarCaracterizacionDialog({
                 {grupo.campos.map(({ campo, label, tipo }) => (
                   <div key={campo} className="flex flex-col gap-1.5">
                     <Label htmlFor={campo}>{label}</Label>
-                    <Input id={campo} type={tipo === "numero" ? "number" : "text"} {...register(campo)} />
+                    {tipo === "multi" ? (
+                      <Controller
+                        control={control}
+                        name={campo}
+                        render={({ field }) => (
+                          <TagsInput id={campo} value={field.value} onChange={field.onChange} />
+                        )}
+                      />
+                    ) : (
+                      <Input id={campo} type={tipo === "numero" ? "number" : "text"} {...register(campo)} />
+                    )}
                   </div>
                 ))}
               </div>

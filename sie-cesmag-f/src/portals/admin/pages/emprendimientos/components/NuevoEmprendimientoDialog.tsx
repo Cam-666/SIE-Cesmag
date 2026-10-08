@@ -60,7 +60,7 @@ export function NuevoEmprendimientoDialog() {
           Nuevo emprendimiento
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Nuevo emprendimiento</DialogTitle>
           <DialogDescription>

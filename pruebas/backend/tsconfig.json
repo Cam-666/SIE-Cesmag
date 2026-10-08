@@ -1,0 +1,15 @@
+{
+  "//": "Solo para que el editor resuelva tipos e imports en pruebas/backend (noEmit, no la usa ningún build ni script de prueba — eso lo gobierna sie-cesmag-b/vitest.config.ts).",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "paths": {
+      "@/*": ["../../sie-cesmag-b/src/*"]
+    }
+  },
+  "include": ["**/*.ts"]
+}

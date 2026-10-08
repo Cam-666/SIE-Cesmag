@@ -7,8 +7,9 @@ export async function listarMiAgenda(): Promise<Agenda[]> {
   return data
 }
 
-export async function crearBloqueAgenda(payload: NuevoBloqueAgendaPayload): Promise<Agenda> {
-  const { data } = await apiClient.post<Agenda>("/agenda/mia", payload)
+/** El backend devuelve varios bloques: el rango pedido se trocea siempre en bloques atómicos de 15 min. */
+export async function crearBloqueAgenda(payload: NuevoBloqueAgendaPayload): Promise<Agenda[]> {
+  const { data } = await apiClient.post<Agenda[]>("/agenda/mia", payload)
   return data
 }
 

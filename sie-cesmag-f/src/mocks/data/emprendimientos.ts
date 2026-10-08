@@ -279,6 +279,7 @@ export function construirDetalleEmprendimiento(emprendimiento: EmprendimientoMoc
   return {
     idEmprendimiento: emprendimiento.idEmprendimiento,
     nombreReferencia: emprendimiento.nombreReferencia,
+    idEtapaIngreso: 1,
     estado: emprendimiento.estado,
     motivo: emprendimiento.motivo,
     fechaIngreso: emprendimiento.fechaIngreso,

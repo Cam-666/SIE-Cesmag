@@ -24,6 +24,7 @@ const USUARIOS_DEMO: Array<{ credenciales: Credenciales; sesion: SesionUsuario }
       // El coordinador administra permisos; en esta demo tiene acceso total.
       permisos: permisosDelRol(1),
       token: "mock-token-admin",
+      refreshToken: "mock-refresh-admin",
     },
   },
   {
@@ -33,11 +34,12 @@ const USUARIOS_DEMO: Array<{ credenciales: Credenciales; sesion: SesionUsuario }
       nombre: "María López",
       correo: "mlopez@unicesmag.edu.co",
       idRol: 3,
-      rolNombre: "Empleado",
+      rolNombre: "Administrativo",
       ambito: "admin",
       // Permisos acotados: útil para ver la matriz de permisos en acción.
       permisos: permisosDelRol(3),
       token: "mock-token-empleado",
+      refreshToken: "mock-refresh-empleado",
     },
   },
   {
@@ -51,11 +53,47 @@ const USUARIOS_DEMO: Array<{ credenciales: Credenciales; sesion: SesionUsuario }
       ambito: "emprendedor",
       permisos: [],
       token: "mock-token-emprendedor",
+      refreshToken: "mock-refresh-emprendedor",
     },
   },
 ]
 
+/** El mock no distingue token por usuario fuera de login: busca por `idUsuario` codificado en el token (ver `usuario-actual.ts`). */
+function sesionPorToken(request: Request) {
+  const token = request.headers.get("Authorization")?.replace("Bearer ", "") ?? null
+  return USUARIOS_DEMO.find((u) => u.sesion.token === token)?.sesion ?? null
+}
+
 export const authHandlers = [
+  http.get("/api/auth/me", async ({ request }) => {
+    await delay(200)
+    const sesion = sesionPorToken(request)
+    if (!sesion) {
+      return HttpResponse.json({ message: "No autenticado." }, { status: 401 })
+    }
+    const resto: Omit<SesionUsuario, "token" | "refreshToken"> = {
+      idUsuario: sesion.idUsuario,
+      nombre: sesion.nombre,
+      correo: sesion.correo,
+      idRol: sesion.idRol,
+      rolNombre: sesion.rolNombre,
+      ambito: sesion.ambito,
+      permisos: sesion.permisos,
+    }
+    return HttpResponse.json(resto)
+  }),
+
+  /** El refresh token del mock nunca expira — basta con devolver la misma sesión. */
+  http.post("/api/auth/refrescar", async ({ request }) => {
+    await delay(300)
+    const body = (await request.json()) as { refreshToken: string }
+    const encontrado = USUARIOS_DEMO.find((u) => u.sesion.refreshToken === body.refreshToken)
+    if (!encontrado) {
+      return HttpResponse.json({ message: "La sesión expiró. Inicie sesión de nuevo." }, { status: 401 })
+    }
+    return HttpResponse.json(encontrado.sesion)
+  }),
+
   http.post("/api/auth/login", async ({ request }) => {
     await delay(400)
     const body = (await request.json()) as Credenciales

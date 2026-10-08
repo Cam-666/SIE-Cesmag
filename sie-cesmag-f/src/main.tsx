@@ -4,13 +4,10 @@ import './index.css'
 import App from './app/App.tsx'
 
 async function preparar() {
-  // Mientras el backend no cubra todos los módulos, MSW sigue disponible
-  // para desarrollar sin depender de él (datos de ejemplo, ver src/mocks).
-  // VITE_USE_MOCKS=false apunta en cambio al backend real (VITE_API_URL) —
-  // útil para probar los módulos que ya están construidos ahí (auth,
-  // usuarios/roles, emprendimientos). Los módulos que el backend real
-  // todavía no tiene (entregables, asesorías, etc.) fallarán en ese modo
-  // hasta que se construyan — es intencional, no un error.
+  // El backend real ya cubre todos los módulos — MSW sigue disponible solo
+  // para desarrollar con datos de ejemplo sin depender de una base de datos
+  // real (ver src/mocks). VITE_USE_MOCKS=false apunta en cambio a la API
+  // real (VITE_API_URL).
   const usarMocks = import.meta.env.VITE_USE_MOCKS !== 'false'
   if (import.meta.env.DEV && usarMocks) {
     const { worker } = await import('./mocks/browser')

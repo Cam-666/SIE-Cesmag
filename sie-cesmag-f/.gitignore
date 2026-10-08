@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+.vercel
+.env*
+
+# Plantillas de ejemplo (sin valores reales) para documentar las variables
+!.env.example
+coverage/

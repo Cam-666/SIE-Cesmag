@@ -30,6 +30,8 @@ export function EditarUsuarioDialog({ usuario, onOpenChange }: EditarUsuarioDial
   // se ofrece aquí como una opción normal, solo desde esa pantalla.
   const rolesAdmin = roles.data?.filter((r) => r.ambito === "admin" && r.nombre !== NOMBRE_ROL_SIN_ROL)
 
+  const esEmprendedor = usuario?.rol?.ambito === "emprendedor"
+
   const { control, handleSubmit } = useForm<EditarUsuarioFormValues>({
     resolver: zodResolver(editarUsuarioSchema),
     values: usuario ? { idRol: String(usuario.idRol), activo: usuario.activo } : undefined,
@@ -52,7 +54,7 @@ export function EditarUsuarioDialog({ usuario, onOpenChange }: EditarUsuarioDial
 
   return (
     <Dialog open={usuario !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-md">
         {usuario && (
           <>
             <DialogHeader>
@@ -62,24 +64,30 @@ export function EditarUsuarioDialog({ usuario, onOpenChange }: EditarUsuarioDial
             <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)} noValidate>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="idRol">Rol asignado</Label>
-                <Controller
-                  control={control}
-                  name="idRol"
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id="idRol" className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {rolesAdmin?.map((rol) => (
-                          <SelectItem key={rol.idRol} value={String(rol.idRol)}>
-                            {rol.nombre}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
+                {esEmprendedor ? (
+                  <p className="rounded-md border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">
+                    {usuario?.rol?.nombre} — el rol de una cuenta de emprendedor no se puede cambiar aquí.
+                  </p>
+                ) : (
+                  <Controller
+                    control={control}
+                    name="idRol"
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger id="idRol" className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {rolesAdmin?.map((rol) => (
+                            <SelectItem key={rol.idRol} value={String(rol.idRol)}>
+                              {rol.nombre}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                )}
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="activo">Estado</Label>

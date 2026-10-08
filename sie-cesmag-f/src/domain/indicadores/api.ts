@@ -6,8 +6,10 @@ import type {
   EntregableRecienteResumen,
   FiltroPeriodo,
   ProximaAsesoriaResumen,
+  PuntoTendenciaMensual,
   ResumenIndicadores,
   RetencionDesercion,
+  TasaAprobacionEntregables,
   TiempoPermanencia,
 } from "@/domain/indicadores/types"
 
@@ -61,6 +63,22 @@ export async function obtenerTiempoPermanencia(
   periodo?: FiltroPeriodo,
 ): Promise<TiempoPermanencia> {
   const { data } = await apiClient.get<TiempoPermanencia>("/indicadores/tiempo-permanencia", {
+    params: periodo,
+  })
+  return data
+}
+
+/** Ingresos y culminaciones por mes (RF-17). */
+export async function obtenerTendenciaMensual(periodo?: FiltroPeriodo): Promise<PuntoTendenciaMensual[]> {
+  const { data } = await apiClient.get<PuntoTendenciaMensual[]>("/indicadores/tendencia-mensual", {
+    params: periodo,
+  })
+  return data
+}
+
+/** % de entregables aprobados sobre el total ya revisado. */
+export async function obtenerTasaAprobacionEntregables(periodo?: FiltroPeriodo): Promise<TasaAprobacionEntregables> {
+  const { data } = await apiClient.get<TasaAprobacionEntregables>("/indicadores/tasa-aprobacion-entregables", {
     params: periodo,
   })
   return data

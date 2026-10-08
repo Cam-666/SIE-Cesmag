@@ -1,0 +1,609 @@
+// SIE CESMAG — esquema de base de datos (Supabase Postgres)
+//
+// Basado en DIAGRAMA_ER.pdf más los ajustes acordados con el coordinador
+// durante el diseño del backend. Cada bloque de comentario indica qué
+// cambia respecto al ER y por qué — no se repite aquí la discusión
+// completa, solo el resultado. Los CHECK de rango/entre-columnas que
+// Prisma no puede expresar en este archivo viven en
+// prisma/sql/checks.sql (mismo mecanismo que la vista).
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["views"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+/** activo = con actividad en curso; inactivo = puede reingresar; terminado = culminó la ruta. */
+enum EstadoEmprendimiento {
+  activo
+  inactivo
+  terminado
+}
+
+/** "pausada": el emprendimiento entró en pausa (p. ej. quedó "inactivo") a mitad de una fase. */
+enum EstadoFase {
+  pendiente
+  en_curso
+  completada
+  pausada
+}
+
+enum TipoAsesoria {
+  diagnostica
+  seguimiento
+}
+
+enum ModalidadAsesoria {
+  presencial
+  virtual
+}
+
+/**
+ * "no_realizada": llegó la fecha programada pero la asesoría no se llevó a cabo.
+ */
+enum EstadoAsesoria {
+  programada
+  completada
+  cancelada
+  no_realizada
+}
+
+/** Estado de un bloque de disponibilidad del asesor. */
+enum EstadoAgenda {
+  disponible
+  reservado
+  bloqueado
+}
+
+/** Estado del compromiso frente a la fecha prevista. */
+enum EstadoActividad {
+  pendiente
+  entregado
+  no_entregado
+}
+
+/** Resultado de revisión de un intento de entrega. */
+enum EstadoRevision {
+  pendiente
+  aprobado
+  rechazado
+}
+
+/** Tipo de notificación, decide ícono y a qué registro apunta. */
+enum TipoNotificacion {
+  inactividad
+  agendamiento_asesoria
+  recordatorio_asesoria
+  recordatorio_entregable
+  resultado_revision
+  /// Al responsable de la etapa (o a todo el personal con permiso, si no hay
+  /// uno asignado): el emprendedor entregó o volvió a entregar evidencia.
+  entrega_recibida
+}
+
+/** Respuesta a la pregunta 1 del formulario ("¿tienes un emprendimiento activo?"). */
+enum FiltroInicial {
+  activo
+  idea
+  futuro
+  no_interesa
+}
+
+/** Estado de aprobación de la persona (antes vivía en FORMULARIO, ahora en EMPRENDEDOR). */
+enum EstadoPrecandidato {
+  pendiente
+  aprobado
+  rechazado
+}
+
+/**
+ * Bloque 2 del formulario ("Perfil del estudiante").
+ */
+enum Jornada {
+  Diurna
+  Nocturna
+  Otro
+}
+
+enum TipoPregunta {
+  texto
+  numero
+  seleccion_unica
+  seleccion_multiple
+}
+
+/** Módulos del portal admin, para la matriz de permisos por rol. */
+enum ModuloAdmin {
+  dashboard
+  emprendimientos
+  asesorias
+  entregables
+  reportes
+  usuarios_roles  @map("usuarios-roles")
+}
+
+// ============================================================
+// ACCESO Y ADMINISTRACIÓN
+// ============================================================
+
+model Rol {
+  idRol         Int      @id @default(autoincrement()) @map("id_rol")
+  nombre        String   @unique @db.VarChar(50)
+  descripcion   String?  @db.VarChar(250)
+  /**
+   * A qué portal pertenece este rol (admin o emprendedor). No es una columna
+   * del ER original, pero el mock del frontend ya la trataba como un dato
+   * plano por rol (no una regla derivada) — se formaliza aquí.
+   */
+  ambito        String   @db.VarChar(20)
+  activo        Boolean  @default(true)
+  fechaCreacion DateTime @default(now()) @map("fecha_creacion")
+
+  usuarios Usuario[]
+  permisos PermisoRol[]
+
+  @@map("rol")
+}
+
+/**
+ * Tabla nueva (no existía en el ER). Permite al coordinador asignar y
+ * modificar en caliente qué puede hacer cada rol por módulo
+ * (ver/editar/eliminar/añadir), reflejándose de inmediato sin desplegar
+ * código nuevo. La verificación del permiso la sigue haciendo el backend
+ * (middleware de Express); esta tabla es solo dónde vive la asignación.
+ */
+model PermisoRol {
+  idPermisoRol  Int         @id @default(autoincrement()) @map("id_permiso_rol")
+  idRol         Int         @map("id_rol")
+  rol           Rol         @relation(fields: [idRol], references: [idRol], onDelete: Cascade)
+  modulo        ModuloAdmin
+  puedeVer      Boolean     @default(false) @map("puede_ver")
+  puedeEditar   Boolean     @default(false) @map("puede_editar")
+  puedeEliminar Boolean     @default(false) @map("puede_eliminar")
+  puedeAnadir   Boolean     @default(false) @map("puede_anadir")
+
+  @@unique([idRol, modulo])
+  @@map("permiso_rol")
+}
+
+/**
+ * Entidad USUARIO (ER), adaptada a Supabase Auth: ya no guarda
+ * `contrasena_hash` (Supabase gestiona el hash, el login y el correo de
+ * restablecimiento). `id_usuario` es el mismo UUID que `auth.users.id`; se
+ * crea junto con la cuenta de Auth.
+ * Solo existe para cuentas que YA tienen acceso a la plataforma (personal
+ * administrativo, y emprendedores ya aprobados) — un precandidato no tiene
+ * fila aquí todavía, ver `Emprendedor`.
+ */
+model Usuario {
+  idUsuario     String   @id @map("id_usuario") @db.Uuid
+  nombre        String   @db.VarChar(150)
+  correo        String   @unique @db.VarChar(150)
+  idRol         Int      @map("id_rol")
+  rol           Rol      @relation(fields: [idRol], references: [idRol], onDelete: Restrict)
+  activo        Boolean  @default(true)
+  // No vive como columna propia en el ER; dato de contacto editable desde
+  // "Mi perfil" del portal admin.
+  telefono      String?  @db.VarChar(30)
+  fechaCreacion DateTime @default(now()) @map("fecha_creacion")
+
+  emprendedor       Emprendedor?
+  agenda            Agenda[]
+  notificaciones    Notificacion[]
+  etapasResponsable Etapa[]
+
+  @@map("usuario")
+}
+
+// ============================================================
+// EMPRENDEDORES Y EMPRENDIMIENTOS
+// ============================================================
+
+/**
+ * Entidad EMPRENDEDOR (ER) — reestructurada: ya NO es 1:1 con USUARIO desde
+ * el día uno. Tiene su propio `id_emprendedor` y existe desde que la
+ * persona llena la encuesta de caracterización (como precandidato,
+ * `estado_precandidato = 'pendiente'`, `id_usuario` todavía NULL). Solo
+ * cuando se aprueba se le crea la cuenta de acceso y se llena `id_usuario`.
+ * Si se rechaza, la fila se queda así para siempre — es la única huella de
+ * esa persona en todo el sistema.
+ * Esto también simplifica "Agregar integrante": buscar por
+ * `numero_identificacion` en esta sola tabla ya cubre los 3 casos (cuenta
+ * existente / formulario pendiente sin aprobar / nadie) en vez de tener que
+ * buscar en dos tablas distintas.
+ */
+model Emprendedor {
+  idEmprendedor        Int                @id @default(autoincrement()) @map("id_emprendedor")
+  idUsuario            String?            @unique @map("id_usuario") @db.Uuid
+  usuario              Usuario?           @relation(fields: [idUsuario], references: [idUsuario], onDelete: SetNull)
+  nombre               String             @db.VarChar(150)
+  correo               String             @db.VarChar(150)
+  numeroIdentificacion String             @unique @map("numero_identificacion") @db.VarChar(20)
+  fechaNacimiento      DateTime?          @map("fecha_nacimiento") @db.Date
+  programaAcademico    String?            @map("programa_academico") @db.VarChar(150)
+  semestre             Int?               @db.SmallInt
+  jornada              Jornada?
+  // Dato de contacto editable desde "Mi perfil" (portal del emprendedor).
+  // No vive en el ER como columna propia, igual que `telefono` en USUARIO.
+  telefono             String?            @db.VarChar(30)
+  estadoPrecandidato   EstadoPrecandidato @default(pendiente) @map("estado_precandidato")
+  fechaRegistro        DateTime           @default(now()) @map("fecha_registro")
+  fechaActualizacion   DateTime?          @updatedAt @map("fecha_actualizacion")
+
+  formularios     Formulario[]
+  emprendimientos EmprendedorEmprendimiento[]
+
+  @@map("emprendedor")
+}
+
+/**
+ * Entidad EMPRENDIMIENTO (ER). A propósito NO tiene columnas de
+ * caracterización del negocio (sector, validación, etc.) — esos datos se
+ * consultan desde `vista_caracterizacion` (ver prisma/sql/vista_caracterizacion.sql),
+ * que hace PIVOT de RESPUESTA a través de `id_formulario`. La edición de
+ * caracterización actúa directamente sobre las filas de RESPUESTA
+ * correspondientes (por `id_formulario` + `codigo` de la pregunta), sin
+ * conservar historial de ediciones.
+ * `id_formulario` es el formulario de quien fundó el emprendimiento — por
+ * proceso, solo esa persona llena la encuesta; los demás integrantes se
+ * agregan directo a la plataforma sin encuesta propia.
+ */
+model Emprendimiento {
+  idEmprendimiento   Int                  @id @default(autoincrement()) @map("id_emprendimiento")
+  idFormulario       Int?                 @unique @map("id_formulario")
+  formulario         Formulario?          @relation(fields: [idFormulario], references: [idFormulario], onDelete: Restrict)
+  nombreReferencia   String               @map("nombre_referencia") @db.VarChar(150)
+  estado             EstadoEmprendimiento @default(activo)
+  motivo             String?              @db.VarChar(300)
+  // Nota de la primera asesoría (situación inicial, qué necesita el
+  // emprendedor, conocimientos sobre validación temprana). No amerita su
+  // propia tabla, es un texto libre de una sola vez.
+  diagnosticoInicial String?              @map("diagnostico_inicial") @db.VarChar(1000)
+  // Con qué etapa arrancó la ruta (RF-07): un emprendimiento más avanzado
+  // puede entrar directo en la etapa 2 o 3, sin pasar por las anteriores —
+  // se guarda para no ofrecer esas etapas al asignar entregables, aunque
+  // sus filas EMPRENDIMIENTO_FASE igual existan (quedan "pendiente" para
+  // que la ruta completa se siga viendo desde el inicio).
+  idEtapaIngreso     Int?                 @map("id_etapa_ingreso")
+  fechaIngreso       DateTime             @map("fecha_ingreso") @db.Date
+  fechaCulminacion   DateTime?            @map("fecha_culminacion") @db.Date
+  fechaDesistimiento DateTime?            @map("fecha_desistimiento") @db.Date
+  fechaReingreso     DateTime?            @map("fecha_reingreso") @db.Date
+  fechaInactividad   DateTime?            @map("fecha_inactividad") @db.Date
+
+  integrantes EmprendedorEmprendimiento[]
+  fases       EmprendimientoFase[]
+
+  @@map("emprendimiento")
+}
+
+/** Entidad EMPRENDEDOR_EMPRENDIMIENTO (ER): integrantes de un mismo emprendimiento. */
+model EmprendedorEmprendimiento {
+  idEmprendedor    Int @map("id_emprendedor")
+  idEmprendimiento Int @map("id_emprendimiento")
+
+  emprendedor    Emprendedor    @relation(fields: [idEmprendedor], references: [idEmprendedor], onDelete: Cascade)
+  emprendimiento Emprendimiento @relation(fields: [idEmprendimiento], references: [idEmprendimiento], onDelete: Cascade)
+
+  @@id([idEmprendedor, idEmprendimiento])
+  @@map("emprendedor_emprendimiento")
+}
+
+// ============================================================
+// CARACTERIZACIÓN (FORMULARIO PÚBLICO DE GOOGLE FORMS)
+// ============================================================
+
+/**
+ * Entidad FORMULARIO (ER): un envío de la encuesta de caracterización,
+ * ligado a la persona (`id_emprendedor`), no a una cuenta de acceso — la
+ * persona puede no tener cuenta todavía. `filtro_inicial` es la respuesta
+ * a la pregunta 1 (bloque/rama de la encuesta que aplica);
+ * `quiere_acompanamiento` es la respuesta a la pregunta 26, la que
+ * realmente decide si esto cuenta como precandidato.
+ */
+model Formulario {
+  idFormulario         Int           @id @default(autoincrement()) @map("id_formulario")
+  idEmprendedor        Int           @unique @map("id_emprendedor")
+  emprendedor          Emprendedor   @relation(fields: [idEmprendedor], references: [idEmprendedor], onDelete: Restrict)
+  fechaRespuesta       DateTime      @default(now()) @map("fecha_respuesta")
+  filtroInicial        FiltroInicial @map("filtro_inicial")
+  quiereAcompanamiento Boolean       @map("quiere_acompañamiento")
+
+  respuestas     Respuesta[]
+  emprendimiento Emprendimiento?
+
+  @@map("formulario")
+}
+
+/**
+ * Entidad PREGUNTA (ER). `codigo` es el identificador corto y estable
+ * (p. ej. "sector", "nivel_validacion") independiente del texto exacto de
+ * la pregunta, que sí puede cambiar de redacción con el tiempo. Lo usa
+ * tanto `vista_caracterizacion` (para el PIVOT) como el backend al
+ * aprobar un precandidato (para saber qué respuesta va a qué columna de
+ * EMPRENDEDOR, p. ej. "programa_academico").
+ */
+model Pregunta {
+  idPregunta  Int          @id @default(autoincrement()) @map("id_pregunta")
+  codigo      String       @unique @db.VarChar(50)
+  bloque      Int          @db.SmallInt
+  orden       Int          @db.SmallInt
+  texto       String       @db.VarChar(300)
+  tipo        TipoPregunta
+  obligatoria Boolean      @default(true)
+
+  respuestas Respuesta[]
+
+  @@map("pregunta")
+}
+
+/**
+ * Entidad RESPUESTA (ER). Con preguntas de selección múltiple (p. ej.
+ * "herramientas_digitales"), una misma (id_formulario, id_pregunta) puede
+ * tener varias filas, una por opción marcada — por eso NO se restringe a
+ * una fila única por pregunta; `vista_caracterizacion` las agrupa con
+ * ARRAY_AGG. La edición de caracterización actúa sobre estas filas
+ * directamente (upsert por id_formulario + id_pregunta en las de selección
+ * única; borrar e insertar de nuevo en las de selección múltiple).
+ */
+model Respuesta {
+  idRespuesta  Int        @id @default(autoincrement()) @map("id_respuesta")
+  idFormulario Int        @map("id_formulario")
+  idPregunta   Int        @map("id_pregunta")
+  formulario   Formulario @relation(fields: [idFormulario], references: [idFormulario], onDelete: Cascade)
+  pregunta     Pregunta   @relation(fields: [idPregunta], references: [idPregunta], onDelete: Restrict)
+  textoLibre   String?    @map("texto_libre") @db.VarChar(300)
+  valorNumero  Int?       @map("valor_numero") @db.SmallInt
+  esOtro       Boolean?   @map("es_otro")
+
+  @@map("respuesta")
+}
+
+// ============================================================
+// RUTA METODOLÓGICA
+// ============================================================
+
+/**
+ * Entidad ETAPA (ER). `id_usuario_responsable` es nuevo — columna directa y
+ * no tabla de unión aparte porque en la práctica es 1:1 (una etapa tiene, a
+ * lo sumo, un responsable vigente a la vez).
+ */
+model Etapa {
+  idEtapa              Int      @id @default(autoincrement()) @map("id_etapa")
+  numero               Int      @unique @db.SmallInt
+  nombre               String   @unique @db.VarChar(150)
+  descripcion          String?  @db.VarChar(300)
+  idUsuarioResponsable String?  @map("id_usuario_responsable") @db.Uuid
+  usuarioResponsable   Usuario? @relation(fields: [idUsuarioResponsable], references: [idUsuario], onDelete: SetNull)
+
+  fases Fase[]
+
+  @@map("etapa")
+}
+
+/**
+ * Entidad FASE (ER): las 12 fases distribuidas entre las 3 etapas (6+3+3, Manual Operativo v2.0).
+ */
+model Fase {
+  idEtapa               Int     @map("id_etapa")
+  idFase                Int     @id @default(autoincrement()) @map("id_fase")
+  etapa                 Etapa   @relation(fields: [idEtapa], references: [idEtapa], onDelete: Restrict)
+  numero                Int     @unique @db.SmallInt
+  nombre                String  @unique @db.VarChar(150)
+  entregablesRequeridos String? @map("entregables_requeridos") @db.VarChar(300)
+
+  emprendimientoFases EmprendimientoFase[]
+
+  @@map("fase")
+}
+
+/**
+ * Entidad EMPRENDIMIENTO_FASE (ER): ubicación de un emprendimiento en la ruta.
+ */
+model EmprendimientoFase {
+  idEmprendimientoFase Int            @id @default(autoincrement()) @map("id_emprendimiento_fase")
+  idEmprendimiento     Int            @map("id_emprendimiento")
+  idFase               Int            @map("id_fase")
+  emprendimiento       Emprendimiento @relation(fields: [idEmprendimiento], references: [idEmprendimiento], onDelete: Cascade)
+  fase                 Fase           @relation(fields: [idFase], references: [idFase], onDelete: Restrict)
+  fechaInicio          DateTime       @map("fecha_inicio") @db.Date
+  fechaFin             DateTime?      @map("fecha_fin") @db.Date
+  estadoFase           EstadoFase     @default(pendiente) @map("estado_fase")
+
+  asesorias   Asesoria[]
+  entregables Entregable[]
+
+  @@unique([idEmprendimiento, idFase])
+  @@map("emprendimiento_fase")
+}
+
+// ============================================================
+// ACOMPAÑAMIENTO (ASESORÍAS, AGENDA, ENTREGABLES)
+// ============================================================
+
+/**
+ * Entidad AGENDA (ER): bloque de disponibilidad con fecha concreta,
+ * configurado por cualquier usuario administrativo — no solo el
+ * coordinador. `@@unique` evita que el mismo asesor cree dos bloques
+ * idénticos (mismo día y misma hora de inicio) por accidente.
+ */
+model Agenda {
+  idAgenda   Int          @id @default(autoincrement()) @map("id_agenda")
+  idUsuario  String       @map("id_usuario") @db.Uuid
+  usuario    Usuario      @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
+  fecha      DateTime     @db.Date
+  horaInicio DateTime     @map("hora_inicio") @db.Time
+  horaFin    DateTime     @map("hora_fin") @db.Time
+  estado     EstadoAgenda @default(disponible)
+
+  asesorias Asesoria[]
+
+  @@unique([idUsuario, fecha, horaInicio])
+  @@map("agenda")
+}
+
+/**
+ * Entidad ASESORIA (ER). `actividades` es un checklist embebido (sin
+ * flujo de revisión propio, no amerita tabla aparte). `id_agenda` NO es
+ * único: al reprogramar, esta misma fila cambia de bloque (el viejo
+ * vuelve a "disponible" y puede terminar reservado por otra asesoría más
+ * adelante) — varias filas de ASESORIA pueden apuntar al mismo bloque de
+ * AGENDA a lo largo del tiempo, solo una activa a la vez.
+ */
+model Asesoria {
+  idAsesoria           Int                @id @default(autoincrement()) @map("id_asesoria")
+  idEmprendimientoFase Int                @map("id_emprendimiento_fase")
+  idAgenda             Int                @map("id_agenda")
+  emprendimientoFase   EmprendimientoFase @relation(fields: [idEmprendimientoFase], references: [idEmprendimientoFase], onDelete: Restrict)
+  agenda               Agenda             @relation(fields: [idAgenda], references: [idAgenda], onDelete: Restrict)
+  /// `idAgenda` es solo el bloque atómico donde arranca; la duración real
+  /// (15/30/45/60 min, elegida por quien agenda) encadena tantos bloques
+  /// atómicos consecutivos como haga falta — ver `resolverCadenaDeBloques`.
+  duracionMinutos      Int                @default(15) @map("duracion_minutos")
+  tipoAsesoria         TipoAsesoria       @map("tipo_asesoria")
+  titulo               String             @db.VarChar(200)
+  fechaAsesoria        DateTime           @map("fecha_asesoria")
+  avance               String?            @db.VarChar(300)
+  observaciones        String?            @db.VarChar(300)
+  modalidad            ModalidadAsesoria
+  estadoAsesoria       EstadoAsesoria     @default(programada) @map("estado_asesoria")
+  actividades          Json?
+
+  notificaciones Notificacion[]
+
+  @@map("asesoria")
+}
+
+/**
+ * Entidad ENTREGABLE (ER): pertenece a una fase del emprendimiento, no a una asesoría puntual.
+ */
+model Entregable {
+  idEntregable         Int                @id @default(autoincrement()) @map("id_entregable")
+  idEmprendimientoFase Int                @map("id_emprendimiento_fase")
+  emprendimientoFase   EmprendimientoFase @relation(fields: [idEmprendimientoFase], references: [idEmprendimientoFase], onDelete: Restrict)
+  titulo               String             @db.VarChar(300)
+  descripcion          String             @db.VarChar(300)
+  fechaPrevista        DateTime           @map("fecha_prevista") @db.Date
+  estadoActividad      EstadoActividad    @default(pendiente) @map("estado_actividad")
+
+  intentos       IntentoEntrega[]
+  notificaciones Notificacion[]
+
+  @@map("entregable")
+}
+
+/**
+ * Entidad INTENTO_ENTREGA (ER): historial de intentos de un mismo
+ * entregable. Con archivos reales en Supabase Storage, `ruta_evidencia`
+ * guarda la ruta/clave del objeto, y se necesita el nombre original por
+ * separado (`nombre_archivo`) para mostrarlo y habilitar su descarga con el
+ * nombre correcto.
+ */
+model IntentoEntrega {
+  idIntentoEntrega Int             @id @default(autoincrement()) @map("id_intento_entrega")
+  idEntregable     Int             @map("id_entregable")
+  entregable       Entregable      @relation(fields: [idEntregable], references: [idEntregable], onDelete: Cascade)
+  rutaEvidencia    String          @map("ruta_evidencia") @db.VarChar(500)
+  nombreArchivo    String          @map("nombre_archivo") @db.VarChar(255)
+  fechaEntrega     DateTime?       @map("fecha_entrega")
+  estadoRevision   EstadoRevision? @map("estado_revision")
+  observaciones    String?         @db.VarChar(300)
+
+  @@map("intento_entrega")
+}
+
+// ============================================================
+// NOTIFICACIONES
+// ============================================================
+
+/**
+ * Entidad NOTIFICACION (ER). `id_asesoria`/`id_entregable` son mutuamente
+ * excluyentes según `tipo` (ver checks.sql): dan a qué registro concreto
+ * navegar al hacer clic, y le permiten al backend evitar recordatorios
+ * duplicados. Si el registro enlazado se borra, la notificación se conserva
+ * (solo pierde el enlace) en vez de desaparecer.
+ */
+model Notificacion {
+  idNotificacion Int              @id @default(autoincrement()) @map("id_notificacion")
+  idUsuario      String           @map("id_usuario") @db.Uuid
+  usuario        Usuario          @relation(fields: [idUsuario], references: [idUsuario], onDelete: Cascade)
+  idAsesoria     Int?             @map("id_asesoria")
+  asesoria       Asesoria?        @relation(fields: [idAsesoria], references: [idAsesoria], onDelete: SetNull)
+  idEntregable   Int?             @map("id_entregable")
+  entregable     Entregable?      @relation(fields: [idEntregable], references: [idEntregable], onDelete: SetNull)
+  tipo           TipoNotificacion
+  mensaje        String           @db.VarChar(300)
+  leido          Boolean          @default(false)
+  fechaCreacion  DateTime         @default(now()) @map("fecha_creacion")
+
+  @@map("notificacion")
+}
+
+// ============================================================
+// VISTA DE CARACTERIZACIÓN (ver prisma/sql/vista_caracterizacion.sql
+// para el DDL — Prisma no crea vistas por migración automática, hay que
+// aplicar ese SQL a mano una vez y luego este bloque le da tipos al
+// Prisma Client para consultarla como si fuera una tabla de solo lectura).
+// ============================================================
+
+view VistaCaracterizacion {
+  idEmprendimiento        Int      @unique @map("id_emprendimiento")
+  sector                  String[]
+  origenIdea              String[] @map("origen_idea")
+  tipoClientes            String[] @map("tipo_clientes")
+  queOfrece               String?  @map("que_ofrece")
+  tiempoOperando          String?  @map("tiempo_operando")
+  nivelFormalizacion      String?  @map("nivel_formalizacion")
+  descripcion             String?
+  nivelValidacion         String?  @map("nivel_validacion")
+  tieneVentas             String?  @map("tiene_ventas")
+  alcanceVentas           String?  @map("alcance_ventas")
+  situacionFinanciera     String?  @map("situacion_financiera")
+  registroFinanciero      String?  @map("registro_financiero")
+  conoceCostos            String?  @map("conoce_costos")
+  numeroPersonas          Int?     @map("numero_personas")
+  canalVentas             String[] @map("canal_ventas")
+  herramientasDigitales   String[] @map("herramientas_digitales")
+  tipoInnovacion          String[] @map("tipo_innovacion")
+  fuenteFinanciacion      String[] @map("fuente_financiacion")
+  necesidadesEstrategicas String[] @map("necesidades_estrategicas")
+  temasAcompanamiento     String[] @map("temas_acompanamiento")
+
+  @@map("vista_caracterizacion")
+}
+
+/** Igual que VistaCaracterizacion, pero por FORMULARIO — para revisar la caracterización de un precandidato antes de que exista un EMPRENDIMIENTO. */
+view VistaCaracterizacionFormulario {
+  idFormulario            Int      @unique @map("id_formulario")
+  sector                  String[]
+  origenIdea              String[] @map("origen_idea")
+  tipoClientes            String[] @map("tipo_clientes")
+  queOfrece               String?  @map("que_ofrece")
+  tiempoOperando          String?  @map("tiempo_operando")
+  nivelFormalizacion      String?  @map("nivel_formalizacion")
+  descripcion             String?
+  nivelValidacion         String?  @map("nivel_validacion")
+  tieneVentas             String?  @map("tiene_ventas")
+  alcanceVentas           String?  @map("alcance_ventas")
+  situacionFinanciera     String?  @map("situacion_financiera")
+  registroFinanciero      String?  @map("registro_financiero")
+  conoceCostos            String?  @map("conoce_costos")
+  numeroPersonas          Int?     @map("numero_personas")
+  canalVentas             String[] @map("canal_ventas")
+  herramientasDigitales   String[] @map("herramientas_digitales")
+  tipoInnovacion          String[] @map("tipo_innovacion")
+  fuenteFinanciacion      String[] @map("fuente_financiacion")
+  necesidadesEstrategicas String[] @map("necesidades_estrategicas")
+  temasAcompanamiento     String[] @map("temas_acompanamiento")
+
+  @@map("vista_caracterizacion_formulario")
+}

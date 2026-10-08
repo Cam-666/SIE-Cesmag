@@ -67,3 +67,17 @@ export interface EntregableRecienteResumen {
   emprendimiento: string
   estadoActividad: "pendiente" | "entregado" | "no_entregado"
 }
+
+/** Ingresos y culminaciones por mes (RF-17), para el gráfico de tendencia. */
+export interface PuntoTendenciaMensual {
+  mes: string
+  ingresos: number
+  culminaciones: number
+}
+
+/** % de intentos de entrega aprobados sobre el total ya revisado. */
+export interface TasaAprobacionEntregables {
+  aprobados: number
+  rechazados: number
+  tasaAprobacion: number
+}

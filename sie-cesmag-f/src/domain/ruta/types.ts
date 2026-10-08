@@ -17,8 +17,8 @@ export interface Fase {
   entregablesRequeridos: string | null
 }
 
-/** Estado de una fase dentro de la ruta metodológica. */
-export type EstadoFase = "pendiente" | "en_curso" | "completada"
+/** Estado de una fase dentro de la ruta metodológica. "pausada": quedó en curso cuando el emprendimiento pasó a inactivo. */
+export type EstadoFase = "pendiente" | "en_curso" | "completada" | "pausada"
 
 /** Entidad EMPRENDIMIENTO_FASE (ER): ubicación de un emprendimiento en la ruta. */
 export interface EmprendimientoFase {

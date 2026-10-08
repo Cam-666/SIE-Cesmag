@@ -45,7 +45,7 @@ export const ACCIONES_DISPONIBLES_POR_MODULO: Record<ModuloAdmin, AccionPermiso[
 /**
  * Coordinador (1) y Vicerrector (2): roles base de la dependencia, nunca
  * eliminables (ni el rol ni sus usuarios). El resto de roles, incluido
- * Empleado, sí se pueden eliminar.
+ * Administrativo, sí se pueden eliminar.
  */
 export const IDS_ROL_PROTEGIDO: readonly number[] = [1, 2]
 
@@ -53,6 +53,6 @@ export const IDS_ROL_PROTEGIDO: readonly number[] = [1, 2]
  * Rol reservado del sistema (sembrado en el backend, sin ningún permiso):
  * destino al eliminar un rol "de todas formas" sin reasignar a otro.
  * Identificado por nombre porque no tiene un ID fijo garantizado. Coincide
- * con `NOMBRE_ROL_SIN_ROL` en `sie-cesmag-api/src/lib/constantes.ts`.
+ * con `NOMBRE_ROL_SIN_ROL` en `sie-cesmag-b/src/lib/constantes.ts`.
  */
 export const NOMBRE_ROL_SIN_ROL = "Sin rol"

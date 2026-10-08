@@ -34,14 +34,14 @@ export function estaSinActividadReciente(estado: EstadoEmprendimiento, ultimaAct
  */
 export const CARACTERIZACION_GRUPOS: {
   titulo: string
-  campos: { campo: keyof CaracterizacionEmprendimiento; label: string; tipo?: "numero" | "texto" }[]
+  campos: { campo: keyof CaracterizacionEmprendimiento; label: string; tipo?: "numero" | "texto" | "multi" }[]
 }[] = [
   {
     titulo: "Caracterización del emprendimiento",
     campos: [
-      { campo: "sector", label: "Sector" },
+      { campo: "sector", label: "Sector", tipo: "multi" },
       { campo: "origenIdea", label: "¿Cómo surgió la idea?" },
-      { campo: "tipoClientes", label: "Tipo de clientes" },
+      { campo: "tipoClientes", label: "Tipo de clientes", tipo: "multi" },
       { campo: "queOfrece", label: "¿Qué ofrece principalmente?" },
       { campo: "tiempoOperando", label: "Tiempo operando" },
       { campo: "nivelFormalizacion", label: "Nivel de formalización" },
@@ -68,22 +68,22 @@ export const CARACTERIZACION_GRUPOS: {
     titulo: "Estructura y operación",
     campos: [
       { campo: "numeroPersonas", label: "Personas vinculadas", tipo: "numero" },
-      { campo: "canalVentas", label: "Canal principal de ventas" },
-      { campo: "herramientasDigitales", label: "Herramientas digitales" },
+      { campo: "canalVentas", label: "Canal principal de ventas", tipo: "multi" },
+      { campo: "herramientasDigitales", label: "Herramientas digitales", tipo: "multi" },
     ],
   },
   {
     titulo: "Innovación y escalabilidad",
     campos: [
-      { campo: "tipoInnovacion", label: "Tipo de innovación" },
-      { campo: "fuenteFinanciacion", label: "¿Ha buscado inversión externa?" },
+      { campo: "tipoInnovacion", label: "Tipo de innovación", tipo: "multi" },
+      { campo: "fuenteFinanciacion", label: "¿Ha buscado inversión externa?", tipo: "multi" },
     ],
   },
   {
     titulo: "Necesidades estratégicas",
     campos: [
-      { campo: "necesidadesEstrategicas", label: "Necesidad principal" },
-      { campo: "temasAcompanamiento", label: "Temas de acompañamiento deseados" },
+      { campo: "necesidadesEstrategicas", label: "Necesidad principal", tipo: "multi" },
+      { campo: "temasAcompanamiento", label: "Temas de acompañamiento deseados", tipo: "multi" },
     ],
   },
 ]

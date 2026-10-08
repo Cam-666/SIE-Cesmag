@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { subDays, subMonths } from "date-fns"
-import { AlertTriangle, CheckCircle2, Clock3, FileDown, Rocket, Users, XCircle } from "lucide-react"
+import { AlertTriangle, CheckCircle2, Clock3, FileCheck2, FileDown, Rocket, Users, XCircle } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
@@ -12,14 +12,18 @@ import {
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { BarList } from "@/components/shared/BarList"
+import { DonutChart } from "@/components/shared/DonutChart"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { StatCard } from "@/components/shared/StatCard"
+import { TendenciaMensualChart } from "@/components/shared/TendenciaMensualChart"
 import {
   useAvancePorFaseQuery,
   useDesercionPorEtapaQuery,
   useDistribucionPorEtapaQuery,
   useResumenIndicadoresQuery,
   useRetencionDesercionQuery,
+  useTasaAprobacionEntregablesQuery,
+  useTendenciaMensualQuery,
   useTiempoPermanenciaQuery,
 } from "@/domain/indicadores/queries"
 import type { FiltroPeriodo } from "@/domain/indicadores/types"
@@ -53,6 +57,8 @@ export function ReportesPage() {
   const desercion = useDesercionPorEtapaQuery(periodo)
   const retencion = useRetencionDesercionQuery(periodo)
   const permanencia = useTiempoPermanenciaQuery(periodo)
+  const tendencia = useTendenciaMensualQuery(periodo)
+  const tasaAprobacion = useTasaAprobacionEntregablesQuery(periodo)
 
   const totalRetencion = (retencion.data?.retenidos ?? 0) + (retencion.data?.desertados ?? 0)
   const pctRetenidos = totalRetencion > 0 ? ((retencion.data?.retenidos ?? 0) / totalRetencion) * 100 : 0
@@ -60,7 +66,7 @@ export function ReportesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
         <div>
           <h1 className="text-xl font-semibold text-primary-900">Reportes e Indicadores</h1>
           <p className="text-sm text-muted-foreground">
@@ -87,7 +93,15 @@ export function ReportesPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+      {/* Encabezado que SÍ sale impreso, con el periodo elegido en texto en vez del selector. */}
+      <div className="hidden print:block">
+        <h1 className="text-xl font-semibold text-primary-900">Reportes e Indicadores — Coordinación de Emprendimiento</h1>
+        <p className="text-sm text-muted-foreground">
+          Periodo: {PRESET_LABEL[preset]} · Generado el {new Date().toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" })}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
         <StatCard
           label="Total emprendimientos"
           value={resumen.data?.totalEmprendimientos ?? "—"}
@@ -123,9 +137,27 @@ export function ReportesPage() {
           loading={resumen.isPending}
           accent="destructive"
         />
+        <StatCard
+          label="Entregables aprobados"
+          value={tasaAprobacion.data ? `${tasaAprobacion.data.tasaAprobacion}%` : "—"}
+          icon={FileCheck2}
+          loading={tasaAprobacion.isPending}
+          accent="primary"
+        />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle>Ingresos y culminaciones por mes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {tendencia.isPending && <Skeleton className="h-44 w-full" />}
+          {tendencia.isError && <EmptyState icon={AlertTriangle} title="No se pudo cargar la tendencia mensual" />}
+          {tendencia.data && <TendenciaMensualChart datos={tendencia.data} />}
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle>Distribución por etapa</CardTitle>
@@ -136,12 +168,35 @@ export function ReportesPage() {
               <EmptyState icon={AlertTriangle} title="No se pudo cargar la distribución" />
             )}
             {distribucion.data && distribucion.data.length > 0 && (
-              <BarList
+              <DonutChart
                 items={distribucion.data.map((e) => ({
                   id: e.idEtapa,
                   label: e.nombreEtapa,
                   value: e.cantidad,
                 }))}
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Entregables revisados</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {tasaAprobacion.isPending && <Skeleton className="h-32 w-full" />}
+            {tasaAprobacion.isError && (
+              <EmptyState icon={AlertTriangle} title="No se pudo cargar la tasa de aprobación" />
+            )}
+            {tasaAprobacion.data && tasaAprobacion.data.aprobados + tasaAprobacion.data.rechazados === 0 && (
+              <EmptyState icon={FileCheck2} title="Sin entregables revisados en el periodo" />
+            )}
+            {tasaAprobacion.data && tasaAprobacion.data.aprobados + tasaAprobacion.data.rechazados > 0 && (
+              <DonutChart
+                items={[
+                  { id: "aprobados", label: "Aprobados", value: tasaAprobacion.data.aprobados },
+                  { id: "rechazados", label: "Rechazados", value: tasaAprobacion.data.rechazados },
+                ]}
               />
             )}
           </CardContent>
@@ -242,7 +297,7 @@ export function ReportesPage() {
         </CardHeader>
         <CardContent>
           {permanencia.isPending && (
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <Skeleton className="h-20 w-full" />
               <Skeleton className="h-20 w-full" />
               <Skeleton className="h-20 w-full" />
@@ -259,7 +314,7 @@ export function ReportesPage() {
             />
           )}
           {permanencia.data && permanencia.data.promedioDias > 0 && (
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <StatCard label="Promedio (días)" value={permanencia.data.promedioDias} icon={Clock3} accent="primary" />
               <StatCard label="Mínimo (días)" value={permanencia.data.minimoDias} icon={Clock3} accent="primary" />
               <StatCard label="Máximo (días)" value={permanencia.data.maximoDias} icon={Clock3} accent="destructive" />

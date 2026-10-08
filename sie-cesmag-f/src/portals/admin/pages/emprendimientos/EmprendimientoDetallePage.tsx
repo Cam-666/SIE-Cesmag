@@ -34,6 +34,7 @@ import { FaseEntregablesDialog } from "@/portals/admin/pages/emprendimientos/com
 import { DiagnosticoInicialDialog } from "@/portals/admin/pages/emprendimientos/components/DiagnosticoInicialDialog"
 import type { EtapaRuta, FaseRuta } from "@/domain/ruta/types"
 import { usePermiso } from "@/hooks/usePermiso"
+import { fechaAsesoriaComoLocal } from "@/lib/fecha-asesoria"
 
 /** Situación actual e historial completo de un emprendimiento. */
 export function EmprendimientoDetallePage() {
@@ -79,7 +80,9 @@ export function EmprendimientoDetallePage() {
   const faseActualNombre = data.faseActual?.fase
     ? `${data.faseActual.fase.numero}. ${data.faseActual.fase.nombre}`
     : "—"
-  const etapaActualNombre = data.ruta.find((e) => e.fases.some((f) => f.estadoFase === "en_curso"))?.nombre
+  const etapaActualNombre = data.ruta.find((e) =>
+    e.fases.some((f) => f.estadoFase === "en_curso" || f.estadoFase === "pausada"),
+  )?.nombre
 
   return (
     <div className="flex flex-col gap-6">
@@ -350,7 +353,7 @@ export function EmprendimientoDetallePage() {
                       onClick={() => setAsesoriaSeleccionada(asesoria)}
                     >
                       <TableCell className="text-sm text-muted-foreground">
-                        {format(new Date(asesoria.fechaAsesoria), "d/MM h:mm a", { locale: es })}
+                        {format(fechaAsesoriaComoLocal(asesoria.fechaAsesoria), "d/MM h:mm a", { locale: es })}
                       </TableCell>
                       <TableCell className="font-medium text-foreground">{asesoria.asesor}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">
@@ -408,6 +411,7 @@ export function EmprendimientoDetallePage() {
       <FaseEntregablesDialog
         idEmprendimiento={data.idEmprendimiento}
         seleccion={faseSeleccionada}
+        numeroEtapaIngreso={data.ruta.find((e) => e.idEtapa === data.idEtapaIngreso)?.numero}
         onOpenChange={(open) => !open && setFaseSeleccionada(null)}
       />
     </div>

@@ -27,6 +27,12 @@ export async function listarAsesorias(
   return data
 }
 
+/** Asesorías propias del usuario administrativo autenticado, como asesor — para "Mi calendario" (Mi perfil). */
+export async function listarMisAsesoriasComoAsesor(): Promise<AsesoriaListado[]> {
+  const { data } = await apiClient.get<AsesoriaListado[]>("/asesorias/mias")
+  return data
+}
+
 /** Agenda una nueva asesoría dentro de un bloque disponible. */
 export async function crearAsesoria(payload: NuevaAsesoriaPayload): Promise<AsesoriaListado> {
   const { data } = await apiClient.post<AsesoriaListado>("/asesorias", payload)

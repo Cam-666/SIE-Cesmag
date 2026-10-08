@@ -3,7 +3,7 @@ import { ROLES } from "@/mocks/data/usuarios"
 import { usuarioActual } from "@/mocks/utils/usuario-actual"
 import type { EditarMiPerfilAdminPayload } from "@/domain/usuario/types"
 
-/** "Mi perfil" del portal admin (Coordinador/Vicerrector/Empleado). */
+/** "Mi perfil" del portal admin (Coordinador/Vicerrector/Administrativo). */
 export const miAdminHandlers = [
   http.get("/api/mi/perfil-admin", async ({ request }) => {
     await delay(400)

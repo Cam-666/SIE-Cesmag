@@ -1,6 +1,6 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Controller, useForm } from "react-hook-form"
+import { Controller, useForm, useWatch } from "react-hook-form"
 import { Loader2, Plus } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -25,8 +25,8 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { nuevoEntregableSchema, type NuevoEntregableFormValues } from "@/domain/entregable/schemas"
 import { useCrearEntregableMutation } from "@/domain/entregable/queries"
-import { useEmprendimientosQuery } from "@/domain/emprendimiento/queries"
-import { FASES } from "@/domain/ruta/catalogo"
+import { useEmprendimientoQuery, useEmprendimientosQuery } from "@/domain/emprendimiento/queries"
+import { ETAPAS, FASES } from "@/domain/ruta/catalogo"
 
 /** Registrar un entregable asignado a un emprendimiento y fase. */
 export function NuevoEntregableDialog() {
@@ -39,8 +39,41 @@ export function NuevoEntregableDialog() {
     control,
     handleSubmit,
     reset,
+    resetField,
     formState: { errors },
-  } = useForm<NuevoEntregableFormValues>({ resolver: zodResolver(nuevoEntregableSchema) })
+  } = useForm<NuevoEntregableFormValues>({
+    resolver: zodResolver(nuevoEntregableSchema),
+    // Sin valores iniciales, Zod reporta "expected string, received undefined" en vez del mensaje en español de cada campo.
+    defaultValues: { idEmprendimiento: "", idFase: "", titulo: "", descripcion: "", fechaPrevista: "" },
+  })
+
+  const idEmprendimientoSeleccionado = useWatch({ control, name: "idEmprendimiento" })
+  const detalle = useEmprendimientoQuery(
+    idEmprendimientoSeleccionado ? Number(idEmprendimientoSeleccionado) : undefined,
+  )
+  // Una fase ya completada no admite más entregables — se descarta del
+  // selector para no repetir el error de "Nuevo entregable" ofreciendo una
+  // fase que el emprendimiento ya superó.
+  const idsFaseCompletada = new Set(
+    detalle.data?.ruta.flatMap((etapa) => etapa.fases).filter((f) => f.estadoFase === "completada")
+      .map((f) => f.idFase) ?? [],
+  )
+  // Si el emprendimiento entró en una etapa avanzada, las anteriores igual
+  // existen en su ruta (quedan "pendiente" para que se vea completa) pero
+  // nunca se van a cursar — tampoco se ofrecen aquí.
+  const numeroEtapaIngreso = ETAPAS.find((e) => e.idEtapa === detalle.data?.idEtapaIngreso)?.numero
+  const fasesDisponibles = FASES.filter((f) => {
+    if (idsFaseCompletada.has(f.idFase)) return false
+    if (numeroEtapaIngreso === undefined) return true
+    const numeroEtapaFase = ETAPAS.find((e) => e.idEtapa === f.idEtapa)?.numero ?? 0
+    return numeroEtapaFase >= numeroEtapaIngreso
+  })
+
+  // Cambiar de emprendimiento invalida la fase que ya estuviera elegida (las
+  // fases completadas difieren de uno a otro).
+  useEffect(() => {
+    resetField("idFase", { defaultValue: "" })
+  }, [idEmprendimientoSeleccionado, resetField])
 
   const onSubmit = async (values: NuevoEntregableFormValues) => {
     try {
@@ -107,12 +140,16 @@ export function NuevoEntregableDialog() {
               control={control}
               name="idFase"
               render={({ field }) => (
-                <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                <Select
+                  value={field.value ?? ""}
+                  onValueChange={field.onChange}
+                  disabled={!idEmprendimientoSeleccionado}
+                >
                   <SelectTrigger id="idFase" className="w-full">
-                    <SelectValue placeholder="Seleccione la fase" />
+                    <SelectValue placeholder="Seleccione primero un emprendimiento" />
                   </SelectTrigger>
                   <SelectContent>
-                    {FASES.map((fase) => (
+                    {fasesDisponibles.map((fase) => (
                       <SelectItem key={fase.idFase} value={String(fase.idFase)}>
                         {fase.numero}. {fase.nombre}
                       </SelectItem>
@@ -122,6 +159,11 @@ export function NuevoEntregableDialog() {
               )}
             />
             {errors.idFase && <p className="text-xs text-destructive-700">{errors.idFase.message}</p>}
+            {idEmprendimientoSeleccionado && fasesDisponibles.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                Este emprendimiento ya completó todas las fases de la ruta.
+              </p>
+            )}
           </div>
 
           <div className="col-span-2 flex flex-col gap-1.5">

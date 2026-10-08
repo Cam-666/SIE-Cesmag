@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useSearchParams } from "react-router-dom"
 import { AlertTriangle, CheckCircle2, Clock, FileCheck2, XCircle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -29,7 +30,11 @@ import { usePermiso } from "@/hooks/usePermiso"
 /** Listado, registro y revisión de entregables. */
 export function EntregablesPage() {
   const [estado, setEstado] = useState<EstadoRevision | "todos">("todos")
-  const [idSeleccionado, setIdSeleccionado] = useState<number | null>(null)
+  const [searchParams] = useSearchParams()
+  const [idSeleccionado, setIdSeleccionado] = useState<number | null>(() => {
+    const idEntregable = searchParams.get("idEntregable")
+    return idEntregable ? Number(idEntregable) : null
+  })
 
   const { data, isPending, isError } = useEntregablesQuery({ estado })
   const puedeAnadir = usePermiso("entregables", "anadir")

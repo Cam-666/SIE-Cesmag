@@ -48,12 +48,22 @@ export function EvidenciaEnlace({
   }
 
   const abrir = async () => {
+    // La pestaña se abre YA, en el mismo clic — si se abriera después del
+    // await (una vez llegada la URL firmada), el navegador la bloquea en
+    // silencio por no verla como originada directamente por el usuario, y
+    // parece que "no pasa nada" al hacer clic.
+    const ventana = window.open("", "_blank", "noopener,noreferrer")
     setCargando(true)
     try {
       const url = await obtenerUrlEvidencia(idEntregable)
-      window.open(url, "_blank", "noopener,noreferrer")
+      if (ventana) {
+        ventana.location.href = url
+      } else {
+        window.location.href = url
+      }
     } catch {
       toast.error("No se pudo abrir el archivo.")
+      ventana?.close()
     } finally {
       setCargando(false)
     }

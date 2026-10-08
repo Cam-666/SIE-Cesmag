@@ -53,9 +53,38 @@ function useInvalidarEmprendimiento(idEmprendimiento: number) {
 export function useAgregarIntegranteMutation(idEmprendimiento: number) {
   const invalidar = useInvalidarEmprendimiento(idEmprendimiento)
   return useMutation({
-    mutationFn: (numeroIdentificacion: string) =>
-      agregarIntegrante(idEmprendimiento, numeroIdentificacion),
+    mutationFn: (payload: { numeroIdentificacion: string; nombre?: string; correo?: string }) =>
+      agregarIntegrante(idEmprendimiento, payload),
     onSuccess: invalidar,
+  })
+}
+
+/**
+ * Igual que `useAgregarIntegranteMutation`, pero sin un `idEmprendimiento`
+ * fijo — para "Nuevo usuario" (Usuarios y Roles), donde se elige el
+ * emprendimiento como parte del propio formulario en vez de venir ya
+ * fijado por la página. Una cuenta de emprendedor SIEMPRE va ligada a un
+ * EMPRENDIMIENTO (ver `usuarios.service.ts` del backend, que por eso
+ * rechaza crear cuentas de ese ámbito) — esto reusa la misma ruta de
+ * "agregar integrante" en vez de duplicar esa lógica.
+ */
+export function useCrearIntegranteMutation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      idEmprendimiento,
+      ...payload
+    }: {
+      idEmprendimiento: number
+      numeroIdentificacion: string
+      nombre?: string
+      correo?: string
+    }) => agregarIntegrante(idEmprendimiento, payload),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["usuarios"] })
+      queryClient.invalidateQueries({ queryKey: ["emprendimientos"] })
+      queryClient.invalidateQueries({ queryKey: ["emprendimientos", variables.idEmprendimiento] })
+    },
   })
 }
 

@@ -10,6 +10,7 @@ export const NOTIFICACIONES_ADMIN: Notificacion[] = persistir("notificaciones-ad
   {
     idNotificacion: 1,
     idAsesoria: 4,
+    idEntregable: null,
     tipo: "recordatorio_asesoria",
     mensaje: "Tiene una asesoría con PetConnect mañana a las 9:00 a. m.",
     leido: false,
@@ -18,6 +19,7 @@ export const NOTIFICACIONES_ADMIN: Notificacion[] = persistir("notificaciones-ad
   {
     idNotificacion: 2,
     idAsesoria: 2,
+    idEntregable: null,
     tipo: "agendamiento_asesoria",
     mensaje: "Diseño & Estilo agendó una asesoría para el 17/09 a las 4:00 p. m.",
     leido: true,
@@ -29,6 +31,7 @@ export const NOTIFICACIONES_EMPRENDEDOR: Notificacion[] = persistir("notificacio
   {
     idNotificacion: 101,
     idAsesoria: 5,
+    idEntregable: null,
     tipo: "recordatorio_asesoria",
     mensaje: "Tiene una asesoría con María López mañana a las 10:00 a. m.",
     leido: false,
@@ -37,6 +40,7 @@ export const NOTIFICACIONES_EMPRENDEDOR: Notificacion[] = persistir("notificacio
   {
     idNotificacion: 102,
     idAsesoria: null,
+    idEntregable: 1,
     tipo: "recordatorio_entregable",
     mensaje: "Su entregable \"Prototipo de baja fidelidad\" vence pronto (28/09).",
     leido: false,
@@ -45,6 +49,7 @@ export const NOTIFICACIONES_EMPRENDEDOR: Notificacion[] = persistir("notificacio
   {
     idNotificacion: 103,
     idAsesoria: null,
+    idEntregable: 2,
     tipo: "resultado_revision",
     mensaje: "Su entregable \"Declaración de reto estructurada.pdf\" fue aprobado.",
     leido: true,

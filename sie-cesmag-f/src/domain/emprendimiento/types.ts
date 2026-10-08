@@ -56,6 +56,8 @@ export interface Emprendimiento {
   integrantes?: IntegranteEmprendimiento[]
   faseActual?: EmprendimientoFase
   caracterizacion: CaracterizacionEmprendimiento
+  /** Con qué etapa arrancó la ruta — las anteriores no se ofrecen al crear un entregable. */
+  idEtapaIngreso: Id | null
   /**
    * Un precandidato recién aprobado ingresa sin etapa asignada hasta que el
    * coordinador registre el diagnóstico inicial y defina la etapa de

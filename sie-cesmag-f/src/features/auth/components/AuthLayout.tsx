@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 import escudoCesmag from "@/assets/escudo-cesmag.png"
 import universidadCesmag from "@/assets/universidad-cesmag.jpg"
+import { PoliticaPrivacidadDialog } from "@/features/auth/components/PoliticaPrivacidadDialog"
 
 /**
  * Layout compartido por las pantallas públicas de autenticación (Login,
@@ -27,6 +28,9 @@ export function AuthLayout({ children }: { children: ReactNode }) {
           <p className="text-2xl font-bold tracking-wide text-white">SIE Cesmag</p>
         </div>
         {children}
+        <p className="mt-6 text-center text-xs text-white/70">
+          <PoliticaPrivacidadDialog />
+        </p>
       </div>
     </div>
   )
