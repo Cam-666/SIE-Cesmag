@@ -1,11 +1,14 @@
 import { z } from "zod"
 
+const duracionAsesoriaSchema = z.union([z.literal(15), z.literal(30), z.literal(45), z.literal(60)])
+
 /** Agendar dentro de un bloque disponible de la propia agenda. */
 export const nuevaAsesoriaSchema = z
   .object({
     idEmprendimiento: z.string().min(1, "Seleccione un emprendimiento."),
     tipoAsesoria: z.enum(["diagnostica", "seguimiento"]),
     idAgenda: z.string().min(1, "Seleccione un horario disponible de su agenda."),
+    duracionMinutos: duracionAsesoriaSchema,
     modalidad: z.enum(["presencial", "virtual"]),
     etapaIdentificada: z.string().optional(),
   })
@@ -33,7 +36,9 @@ export type CancelarAsesoriaFormValues = z.infer<typeof cancelarAsesoriaSchema>
 /** Agendar dentro de un bloque disponible de la agenda del coordinador. */
 export const agendarAsesoriaSchema = z.object({
   tipoAsesoria: z.enum(["diagnostica", "seguimiento"]),
+  modalidad: z.enum(["presencial", "virtual"]),
   idAgenda: z.string().min(1, "Seleccione un horario disponible."),
+  duracionMinutos: duracionAsesoriaSchema,
   motivo: z.string().min(1, "Describa el motivo u objetivo de la asesoría."),
 })
 

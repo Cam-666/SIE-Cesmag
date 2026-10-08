@@ -2,7 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm, useWatch } from "react-hook-form"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { FileUp, Loader2, X } from "lucide-react"
+import { FileUp, Loader2, Trash2, X } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -17,9 +17,12 @@ import {
   cargarEvidenciaSchema,
   type CargarEvidenciaFormValues,
 } from "@/domain/entregable/schemas"
-import { useCargarEvidenciaMutation, useEntregableQuery } from "@/domain/entregable/queries"
+import {
+  useCargarEvidenciaMutation,
+  useEliminarIntentoPendienteMutation,
+  useEntregableQuery,
+} from "@/domain/entregable/queries"
 import { ESTADO_ACTIVIDAD_BADGE, ESTADO_REVISION_BADGE } from "@/domain/entregable/display"
-import { subirArchivoANube } from "@/lib/almacenamiento-nube"
 
 interface CargarEvidenciaDialogProps {
   idEntregable: number | null
@@ -35,6 +38,7 @@ function formatearTamano(bytes: number) {
 export function CargarEvidenciaDialog({ idEntregable, onOpenChange }: CargarEvidenciaDialogProps) {
   const { data, isPending } = useEntregableQuery(idEntregable ?? undefined)
   const cargarEvidencia = useCargarEvidenciaMutation()
+  const eliminarIntento = useEliminarIntentoPendienteMutation()
 
   const {
     register,
@@ -52,15 +56,22 @@ export function CargarEvidenciaDialog({ idEntregable, onOpenChange }: CargarEvid
   const yaAprobado = ultimoIntento?.estadoRevision === "aprobado"
   const enRevision = ultimoIntento?.estadoRevision === "pendiente"
 
+  const onEliminar = async () => {
+    if (!idEntregable) return
+    try {
+      await eliminarIntento.mutateAsync(idEntregable)
+      toast.success("Entrega borrada. Ya puede volver a cargar el archivo.")
+    } catch {
+      toast.error("No se pudo borrar la entrega.")
+    }
+  }
+
   const onSubmit = async (values: CargarEvidenciaFormValues) => {
     if (!idEntregable) return
     try {
-      const archivo = values.archivo[0]
-      const rutaEvidencia = await subirArchivoANube(archivo)
       await cargarEvidencia.mutateAsync({
         idEntregable,
-        rutaEvidencia,
-        nombreArchivo: archivo.name,
+        archivo: values.archivo[0],
         comentario: values.comentario,
       })
       toast.success("Evidencia enviada. Quedará pendiente de revisión.")
@@ -148,10 +159,27 @@ export function CargarEvidenciaDialog({ idEntregable, onOpenChange }: CargarEvid
                 Este entregable ya fue aprobado. No es necesario volver a entregarlo.
               </p>
             ) : enRevision ? (
-              <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
-                Su entrega está pendiente de revisión. Debe esperar a que el coordinador la revise
-                antes de poder cargar una nueva.
-              </p>
+              <div className="flex flex-col gap-2 rounded-md bg-muted px-3 py-2">
+                <p className="text-xs text-muted-foreground">
+                  Su entrega está pendiente de revisión. Si necesita corregir el archivo, puede
+                  borrarla y volver a cargarla.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-fit"
+                  onClick={onEliminar}
+                  disabled={eliminarIntento.isPending}
+                >
+                  {eliminarIntento.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="size-4" />
+                  )}
+                  Borrar entrega
+                </Button>
+              </div>
             ) : (
               <form className="flex flex-col gap-3 border-t border-border pt-4" onSubmit={handleSubmit(onSubmit)} noValidate>
                 <p className="text-sm font-medium text-foreground">

@@ -1,6 +1,7 @@
 import { apiClient } from "@/lib/api-client"
 import type {
   CargarEvidenciaPayload,
+  EntregableComoResponsable,
   EntregableDetalle,
   EntregableListado,
   FiltrosEntregables,
@@ -25,6 +26,12 @@ export async function listarEntregablesPorFase(
   const { data } = await apiClient.get<EntregableListado[]>(
     `/emprendimientos/${idEmprendimiento}/fases/${idFase}/entregables`,
   )
+  return data
+}
+
+/** Entregables de las etapas donde el usuario administrativo autenticado es responsable — para "Mi calendario". */
+export async function listarEntregablesComoResponsable(): Promise<EntregableComoResponsable[]> {
+  const { data } = await apiClient.get<EntregableComoResponsable[]>("/entregables/mios")
   return data
 }
 
@@ -71,11 +78,21 @@ export async function listarMisEntregables(): Promise<MiEntregableListado[]> {
   return data
 }
 
-/** Carga la evidencia de un entregable abierto. */
+/** Carga la evidencia de un entregable abierto — el archivo sube al backend, que lo reenvía a Google Drive. */
 export async function cargarEvidencia(payload: CargarEvidenciaPayload): Promise<EntregableDetalle> {
+  const formulario = new FormData()
+  formulario.append("archivo", payload.archivo)
+  if (payload.comentario) formulario.append("comentario", payload.comentario)
+
   const { data } = await apiClient.post<EntregableDetalle>(
     `/mi/entregables/${payload.idEntregable}/evidencia`,
-    payload,
+    formulario,
   )
+  return data
+}
+
+/** Retracta la entrega mientras sigue pendiente de revisión, para poder volver a cargarla. */
+export async function eliminarIntentoPendiente(idEntregable: number): Promise<EntregableDetalle> {
+  const { data } = await apiClient.delete<EntregableDetalle>(`/mi/entregables/${idEntregable}/evidencia`)
   return data
 }

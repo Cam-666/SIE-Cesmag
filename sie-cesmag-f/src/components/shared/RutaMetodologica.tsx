@@ -6,6 +6,9 @@ const ESTADO_ETAPA_LABEL: Record<EtapaRuta["estado"], string> = {
   completada: "Completada",
   en_curso: "En curso",
   pendiente: "Pendiente",
+  // La etapa en sí nunca queda "pausada" (eso es a nivel de fase, ver abajo)
+  // — se incluye solo porque comparte el tipo EstadoFase.
+  pausada: "En curso",
 }
 
 interface RutaMetodologicaProps {
@@ -57,7 +60,9 @@ export function RutaMetodologica({ ruta, onFaseClick }: RutaMetodologicaProps) {
                           ? `flex items-center gap-1.5 rounded-full bg-primary-700 px-3 py-1.5 text-xs font-medium text-white ${interactivo ? "cursor-pointer hover:bg-primary-600" : "cursor-default"}`
                           : fase.estadoFase === "en_curso"
                             ? `flex items-center gap-1.5 rounded-full border-2 border-destructive-600 bg-destructive-600/5 px-3 py-1.5 text-xs font-medium text-destructive-700 ${interactivo ? "cursor-pointer hover:bg-destructive-600/10" : "cursor-default"}`
-                            : "flex cursor-default items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground"
+                            : fase.estadoFase === "pausada"
+                              ? `flex items-center gap-1.5 rounded-full border-2 border-dashed border-muted-foreground/50 bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground ${interactivo ? "cursor-pointer hover:bg-muted/70" : "cursor-default"}`
+                              : "flex cursor-default items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground"
                       }
                     >
                       {fase.estadoFase === "completada" && <Check className="size-3" />}

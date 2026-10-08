@@ -35,6 +35,7 @@ import type { AsesoriaListado, EstadoAsesoria } from "@/domain/asesoria/types"
 import { NuevaAsesoriaDialog } from "@/portals/admin/pages/asesorias/components/NuevaAsesoriaDialog"
 import { DisponibilidadForm } from "@/portals/admin/pages/asesorias/components/DisponibilidadForm"
 import { usePermiso } from "@/hooks/usePermiso"
+import { fechaAsesoriaComoLocal } from "@/lib/fecha-asesoria"
 
 /** Listado, registro, disponibilidad y gestión de asesorías. */
 export function AsesoriasPage() {
@@ -110,7 +111,7 @@ export function AsesoriasPage() {
                       onClick={() => setSeleccionada(asesoria)}
                     >
                       <TableCell className="text-sm text-muted-foreground">
-                        {format(new Date(asesoria.fechaAsesoria), "d/MM h:mm a", { locale: es })}
+                        {format(fechaAsesoriaComoLocal(asesoria.fechaAsesoria), "d/MM h:mm a", { locale: es })}
                       </TableCell>
                       <TableCell className="font-medium text-foreground">
                         {asesoria.emprendimiento}

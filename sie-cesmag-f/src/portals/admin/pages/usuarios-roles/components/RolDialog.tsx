@@ -28,16 +28,26 @@ import {
 } from "@/domain/usuario/display"
 import type { AccionPermiso, ModuloAdmin, PermisoModulo, Rol } from "@/domain/usuario/types"
 
+// "Usuarios y Roles" queda reservado a Coordinador y Vicerrector (roles
+// protegidos, que ni siquiera pasan por este diálogo): ningún rol editable
+// aquí (Administrativo u otro rol creado a futuro) debe poder administrar
+// usuarios/roles, así que ese módulo no se ofrece en esta matriz.
+const MODULOS_EDITABLES = MODULOS_ADMIN.filter((modulo) => modulo !== "usuarios-roles")
+
 function permisosVacios(): PermisoModulo[] {
   return MODULOS_ADMIN.map((modulo) => ({ modulo, acciones: [] }))
 }
 
-// Descarta acciones que el módulo no admite (p. ej. "editar" en Dashboard),
-// por si el rol trae datos heredados de una versión anterior de la matriz.
+// Descarta acciones que el módulo no admite (p. ej. "editar" en Dashboard) y
+// fuerza "usuarios-roles" a vacío, por si el rol trae datos heredados de una
+// versión anterior de la matriz que sí permitía marcarlo por error.
 function normalizarPermisos(permisos: PermisoModulo[]): PermisoModulo[] {
   return permisos.map((p) => ({
     ...p,
-    acciones: p.acciones.filter((a) => ACCIONES_DISPONIBLES_POR_MODULO[p.modulo].includes(a)),
+    acciones:
+      p.modulo === "usuarios-roles"
+        ? []
+        : p.acciones.filter((a) => ACCIONES_DISPONIBLES_POR_MODULO[p.modulo].includes(a)),
   }))
 }
 
@@ -150,7 +160,7 @@ export function RolDialog({ rol }: RolDialogProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {MODULOS_ADMIN.map((modulo) => (
+                  {MODULOS_EDITABLES.map((modulo) => (
                     <tr key={modulo} className="border-b border-border last:border-0">
                       <td className="px-3 py-2 text-foreground">{MODULO_ADMIN_LABEL[modulo]}</td>
                       {ACCIONES_PERMISO.map((accion) => {
@@ -178,7 +188,9 @@ export function RolDialog({ rol }: RolDialogProps) {
             </div>
             <p className="mt-1.5 text-xs text-muted-foreground">
               "—" indica que la acción no aplica a ese módulo (p. ej. Dashboard y Reportes son de
-              solo lectura, y solo Asesorías tiene una acción de eliminar real).
+              solo lectura). "Eliminar" en Emprendimientos controla quitar un integrante, no
+              borrar el emprendimiento en sí — eso no existe como acción, solo se desactiva o
+              marca como terminado.
             </p>
           </div>
 

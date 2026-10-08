@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Controller, useForm, useWatch } from "react-hook-form"
 import { Loader2, Plus } from "lucide-react"
@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { SelectorHorarioAgenda } from "@/components/shared/SelectorHorarioAgenda"
+import { SelectorDuracionAsesoria } from "@/components/shared/SelectorDuracionAsesoria"
 import { nuevaAsesoriaSchema, type NuevaAsesoriaFormValues } from "@/domain/asesoria/schemas"
 import { useCrearAsesoriaMutation } from "@/domain/asesoria/queries"
 import { useEmprendimientosQuery } from "@/domain/emprendimiento/queries"
@@ -41,6 +42,15 @@ export function NuevaAsesoriaDialog() {
   const miAgenda = useMiAgendaQuery()
   const bloquesDisponibles = miAgenda.data?.filter((b) => b.estado !== "reservado")
 
+  // Refresca la disponibilidad justo al abrir el diálogo: el componente
+  // queda montado de fondo mientras el diálogo está cerrado, así que sin
+  // esto podía mostrar un bloque como "disponible" aunque ya lo hubieran
+  // reservado desde que se cargó la página.
+  useEffect(() => {
+    if (open) void miAgenda.refetch()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
   const {
     control,
     handleSubmit,
@@ -53,12 +63,14 @@ export function NuevaAsesoriaDialog() {
 
   const tipoAsesoria = useWatch({ control, name: "tipoAsesoria" })
   const idAgendaSeleccionado = useWatch({ control, name: "idAgenda" })
+  const duracionSeleccionada = useWatch({ control, name: "duracionMinutos" })
 
   const onSubmit = async (values: NuevaAsesoriaFormValues) => {
     try {
       await crearAsesoria.mutateAsync({
         idEmprendimiento: Number(values.idEmprendimiento),
         idAgenda: Number(values.idAgenda),
+        duracionMinutos: values.duracionMinutos,
         tipoAsesoria: values.tipoAsesoria,
         modalidad: values.modalidad,
         etapaIdentificada: values.etapaIdentificada ? Number(values.etapaIdentificada) : null,
@@ -198,8 +210,27 @@ export function NuevaAsesoriaDialog() {
             {errors.idAgenda && <p className="text-xs text-destructive-700">{errors.idAgenda.message}</p>}
           </div>
 
+          <div className="col-span-2 flex flex-col gap-1.5">
+            <Label htmlFor="duracionMinutos">Duración de la asesoría</Label>
+            <Controller
+              control={control}
+              name="duracionMinutos"
+              render={({ field }) => (
+                <SelectorDuracionAsesoria
+                  bloques={bloquesDisponibles}
+                  idAgendaAncla={idAgendaSeleccionado ?? ""}
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+            {errors.duracionMinutos && (
+              <p className="text-xs text-destructive-700">{errors.duracionMinutos.message}</p>
+            )}
+          </div>
+
           <DialogFooter className="col-span-2">
-            <Button type="submit" disabled={crearAsesoria.isPending || !idAgendaSeleccionado}>
+            <Button type="submit" disabled={crearAsesoria.isPending || !idAgendaSeleccionado || !duracionSeleccionada}>
               {crearAsesoria.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
               Agendar asesoría
             </Button>

@@ -1,3 +1,4 @@
+import { ahoraComoFechaAsesoria } from "@/lib/fecha-asesoria"
 import type { AsesoriaListado, EstadoAsesoria, ModalidadAsesoria } from "@/domain/asesoria/types"
 
 export const ESTADO_ASESORIA_BADGE: Record<
@@ -21,5 +22,5 @@ export const MODALIDAD_LABEL: Record<ModalidadAsesoria, string> = {
  * (motivo, como evidencia).
  */
 export function requiereRegistrarResultado(asesoria: Pick<AsesoriaListado, "estadoAsesoria" | "fechaAsesoria">) {
-  return asesoria.estadoAsesoria === "programada" && new Date(asesoria.fechaAsesoria) <= new Date()
+  return asesoria.estadoAsesoria === "programada" && new Date(asesoria.fechaAsesoria) <= ahoraComoFechaAsesoria()
 }

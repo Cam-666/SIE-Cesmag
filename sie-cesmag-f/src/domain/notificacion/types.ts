@@ -11,11 +11,13 @@ export type TipoNotificacion =
   | "recordatorio_asesoria"
   | "recordatorio_entregable"
   | "resultado_revision"
+  | "entrega_recibida"
 
 /** Entidad NOTIFICACION (ER). */
 export interface Notificacion {
   idNotificacion: Id
   idAsesoria: Id | null
+  idEntregable: Id | null
   tipo: TipoNotificacion
   mensaje: string
   leido: boolean

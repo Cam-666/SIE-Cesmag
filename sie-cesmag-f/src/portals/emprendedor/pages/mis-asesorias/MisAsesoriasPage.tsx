@@ -20,6 +20,7 @@ import { useMisAsesoriasQuery } from "@/domain/asesoria/queries"
 import { ESTADO_ASESORIA_BADGE } from "@/domain/asesoria/display"
 import type { AsesoriaListado } from "@/domain/asesoria/types"
 import { AgendarAsesoriaTab } from "@/portals/emprendedor/pages/mis-asesorias/components/AgendarAsesoriaTab"
+import { fechaAsesoriaComoLocal } from "@/lib/fecha-asesoria"
 
 const TIPO_ASESORIA_LABEL: Record<AsesoriaListado["tipoAsesoria"], string> = {
   diagnostica: "Diagnóstica",
@@ -77,10 +78,10 @@ export function MisAsesoriasPage() {
                   data?.map((asesoria) => (
                     <TableRow key={asesoria.idAsesoria}>
                       <TableCell className="text-sm text-foreground">
-                        {format(new Date(asesoria.fechaAsesoria), "d/MM/yyyy")}
+                        {format(fechaAsesoriaComoLocal(asesoria.fechaAsesoria), "d/MM/yyyy")}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {format(new Date(asesoria.fechaAsesoria), "h:mm a", { locale: es })}
+                        {format(fechaAsesoriaComoLocal(asesoria.fechaAsesoria), "h:mm a", { locale: es })}
                       </TableCell>
                       <TableCell className="text-sm text-foreground">{asesoria.asesor}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">

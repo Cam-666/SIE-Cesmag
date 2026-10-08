@@ -1,0 +1,19 @@
+{
+  "//": "Solo para que el editor resuelva tipos e imports en pruebas/frontend (noEmit, no la usa ningún build ni script de prueba — eso lo gobierna sie-cesmag-f/vitest.config.ts).",
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "paths": {
+      "@/*": ["../../sie-cesmag-f/src/*"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx"]
+}

@@ -1,10 +1,19 @@
 import { z } from "zod"
 
-/** Nombre, correo y rol del nuevo usuario administrativo. */
+/**
+ * Nombre, correo y rol del nuevo usuario. Si el rol elegido es de ámbito
+ * "emprendedor", `nombre`/`correo` dejan de ser obligatorios aquí (solo
+ * hacen falta si la búsqueda por `numeroIdentificacion` no encuentra a
+ * nadie) y en su lugar se exige `idEmprendimiento` — esa combinación de
+ * reglas depende de datos externos (el ámbito del rol elegido), así que se
+ * valida a mano en el formulario en vez de con `.refine()`.
+ */
 export const nuevoUsuarioSchema = z.object({
-  nombre: z.string().min(1, "Ingrese el nombre completo."),
-  correo: z.string().min(1, "Ingrese el correo institucional.").email("Ingrese un correo válido."),
+  nombre: z.string().optional(),
+  correo: z.string().email("Ingrese un correo válido.").optional().or(z.literal("")),
   idRol: z.string().min(1, "Seleccione un rol."),
+  numeroIdentificacion: z.string().optional(),
+  idEmprendimiento: z.string().optional(),
 })
 
 export type NuevoUsuarioFormValues = z.infer<typeof nuevoUsuarioSchema>

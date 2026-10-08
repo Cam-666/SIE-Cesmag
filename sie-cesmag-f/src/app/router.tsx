@@ -1,3 +1,6 @@
+// Rutas de nivel raíz: separa las públicas (login, recuperar/restablecer
+// contraseña) de los dos portales protegidos (/admin, /emprendedor). Cada
+// portal define sus propias sub-rutas por separado (ver portals/*/routes.tsx).
 import { Navigate, Route, Routes } from "react-router-dom"
 import { RedirectIfAuthenticated, RequireAuth } from "@/app/guards"
 import { rutaPortal } from "@/domain/auth/rutas"

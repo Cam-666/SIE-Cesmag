@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { format, parseISO } from "date-fns"
 import { es } from "date-fns/locale"
-import { CalendarClock, Loader2, Lock, Plus, Trash2, Unlock } from "lucide-react"
+import { Loader2, Lock, Plus, Trash2, Unlock, X } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -9,15 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { EmptyState } from "@/components/shared/EmptyState"
+import { AgendaCalendarioLista } from "@/components/shared/AgendaCalendarioLista"
 import {
   useCambiarEstadoBloqueAgendaMutation,
   useCrearBloqueAgendaMutation,
@@ -25,9 +17,18 @@ import {
   useMiAgendaQuery,
 } from "@/domain/agenda/queries"
 import { ESTADO_AGENDA_BADGE } from "@/domain/agenda/display"
+import type { TramoAgenda } from "@/domain/agenda/display"
+import type { EstadoAgenda } from "@/domain/agenda/types"
 import { usePermiso } from "@/hooks/usePermiso"
+import { rangoPermitidoDisponibilidad } from "@/lib/fecha-asesoria"
 
-/** Bloques de disponibilidad con fecha concreta (coincide con la entidad AGENDA del ER). */
+const COLOR_POR_ESTADO: Record<EstadoAgenda, string> = {
+  disponible: "bg-primary-700/10 border-primary-700/40 text-primary-900",
+  bloqueado: "bg-muted border-border text-muted-foreground",
+  reservado: "bg-destructive-600/10 border-destructive-600/40 text-destructive-700",
+}
+
+/** Bloques de disponibilidad con fecha concreta (coincide con la entidad AGENDA del ER), como una agenda semanal. */
 export function DisponibilidadForm() {
   const agenda = useMiAgendaQuery()
   const crear = useCrearBloqueAgendaMutation()
@@ -37,16 +38,40 @@ export function DisponibilidadForm() {
   const puedeEditar = usePermiso("asesorias", "editar")
   const puedeEliminar = usePermiso("asesorias", "eliminar")
 
+  const [tramoSeleccionado, setTramoSeleccionado] = useState<TramoAgenda | null>(null)
   const [nuevo, setNuevo] = useState({ fecha: "", horaInicio: "09:00", horaFin: "10:00" })
-  const nuevoValido = !!nuevo.fecha && nuevo.horaInicio < nuevo.horaFin
+  const { desde: fechaMinima, hasta: fechaMaxima } = rangoPermitidoDisponibilidad()
+  const nuevoValido =
+    !!nuevo.fecha && nuevo.horaInicio < nuevo.horaFin && nuevo.fecha >= fechaMinima && nuevo.fecha <= fechaMaxima
 
   const onAgregar = async () => {
     try {
       await crear.mutateAsync(nuevo)
-      toast.success("Bloque agregado a su disponibilidad.")
+      toast.success(
+        "Disponibilidad agregada. El emprendedor podrá elegir la duración de cada asesoría (15 a 60 min) al agendar.",
+      )
       setNuevo({ fecha: "", horaInicio: "09:00", horaFin: "10:00" })
     } catch {
-      toast.error("No se pudo agregar el bloque.")
+      toast.error("No se pudo agregar el bloque. Revise que la hora de fin sea posterior a la de inicio.")
+    }
+  }
+
+  const onCambiarEstadoTramo = async (tramo: TramoAgenda, estado: Extract<EstadoAgenda, "disponible" | "bloqueado">) => {
+    try {
+      await Promise.all(tramo.ids.map((idAgenda) => cambiarEstado.mutateAsync({ idAgenda, estado })))
+      setTramoSeleccionado(null)
+    } catch {
+      toast.error("No se pudo actualizar el bloque.")
+    }
+  }
+
+  const onEliminarTramo = async (tramo: TramoAgenda) => {
+    try {
+      await Promise.all(tramo.ids.map((idAgenda) => eliminar.mutateAsync(idAgenda)))
+      toast.success("Bloque eliminado.")
+      setTramoSeleccionado(null)
+    } catch {
+      toast.error("No se pudo eliminar el bloque.")
     }
   }
 
@@ -55,104 +80,14 @@ export function DisponibilidadForm() {
       <CardHeader>
         <CardTitle>Mi disponibilidad</CardTitle>
         <p className="text-sm text-muted-foreground">
-          Defina los bloques de fecha y hora en que puede recibir emprendedores. El emprendedor
-          solo podrá agendar dentro de los que estén "Disponible".
+          Defina el rango de fecha y hora en que puede recibir emprendedores — p. ej. de 8:00 a
+          12:00. Quien agende elegirá la hora de inicio y la duración de su asesoría (15 a 60 min)
+          dentro de ese rango, en vez de reservarlo completo de una sola vez. Toque un bloque del
+          calendario para gestionarlo. Solo se puede configurar disponibilidad para el mes actual
+          (desde el día 20, también para el siguiente).
         </p>
       </CardHeader>
       <CardContent className="gap-4">
-        {agenda.isPending && <Skeleton className="h-32 w-full" />}
-
-        {!agenda.isPending && agenda.data?.length === 0 && (
-          <EmptyState
-            icon={CalendarClock}
-            title="Sin bloques de disponibilidad"
-            description="Agregue al menos un bloque con fecha, hora de inicio y hora de fin."
-          />
-        )}
-
-        {!agenda.isPending && agenda.data && agenda.data.length > 0 && (
-          <div className="overflow-hidden rounded-lg border border-border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Hora inicio</TableHead>
-                  <TableHead>Hora fin</TableHead>
-                  <TableHead>Estado</TableHead>
-                  {(puedeEditar || puedeEliminar) && <TableHead className="text-right">Acción</TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {agenda.data.map((bloque) => (
-                  <TableRow key={bloque.idAgenda}>
-                    <TableCell className="text-sm text-foreground capitalize">
-                      {format(parseISO(bloque.fecha), "d 'de' MMMM 'de' yyyy", { locale: es })}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{bloque.horaInicio}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{bloque.horaFin}</TableCell>
-                    <TableCell>
-                      <Badge variant={ESTADO_AGENDA_BADGE[bloque.estado].variant}>
-                        {ESTADO_AGENDA_BADGE[bloque.estado].label}
-                      </Badge>
-                      {bloque.estado === "reservado" && bloque.emprendimiento && (
-                        <span className="ml-2 text-xs text-muted-foreground">{bloque.emprendimiento}</span>
-                      )}
-                    </TableCell>
-                    {(puedeEditar || puedeEliminar) && (
-                      <TableCell className="text-right">
-                        {bloque.estado !== "reservado" && (
-                          <div className="flex justify-end gap-1">
-                            {puedeEditar && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                aria-label={bloque.estado === "disponible" ? "Bloquear" : "Desbloquear"}
-                                title={bloque.estado === "disponible" ? "Marcar como no disponible" : "Marcar como disponible"}
-                                disabled={cambiarEstado.isPending}
-                                onClick={() =>
-                                  cambiarEstado.mutate({
-                                    idAgenda: bloque.idAgenda,
-                                    estado: bloque.estado === "disponible" ? "bloqueado" : "disponible",
-                                  })
-                                }
-                              >
-                                {bloque.estado === "disponible" ? (
-                                  <Lock className="size-4" />
-                                ) : (
-                                  <Unlock className="size-4" />
-                                )}
-                              </Button>
-                            )}
-                            {puedeEliminar && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="text-destructive-700"
-                                aria-label="Eliminar bloque"
-                                disabled={eliminar.isPending}
-                                onClick={() =>
-                                  eliminar.mutate(bloque.idAgenda, {
-                                    onSuccess: () => toast.success("Bloque eliminado."),
-                                    onError: () => toast.error("No se pudo eliminar el bloque."),
-                                  })
-                                }
-                              >
-                                <Trash2 className="size-4" />
-                              </Button>
-                            )}
-                          </div>
-                        )}
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-
         {puedeAnadir && (
           <div className="flex flex-wrap items-end gap-3 rounded-lg border border-dashed border-border p-3">
             <div className="flex flex-col gap-1.5">
@@ -160,6 +95,8 @@ export function DisponibilidadForm() {
               <Input
                 id="nuevo-fecha"
                 type="date"
+                min={fechaMinima}
+                max={fechaMaxima}
                 value={nuevo.fecha}
                 onChange={(e) => setNuevo((v) => ({ ...v, fecha: e.target.value }))}
               />
@@ -189,6 +126,89 @@ export function DisponibilidadForm() {
             {nuevo.fecha && nuevo.horaInicio >= nuevo.horaFin && (
               <p className="w-full text-xs text-destructive-700">La hora de inicio debe ser anterior a la de fin.</p>
             )}
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+          {(Object.keys(COLOR_POR_ESTADO) as EstadoAgenda[]).map((estado) => (
+            <span key={estado} className="flex items-center gap-1.5">
+              <span className={`size-2.5 rounded-full border ${COLOR_POR_ESTADO[estado]}`} />
+              {ESTADO_AGENDA_BADGE[estado].label}
+            </span>
+          ))}
+        </div>
+
+        {agenda.isPending && <Skeleton className="h-64 w-full" />}
+
+        {!agenda.isPending && (
+          <AgendaCalendarioLista
+            bloques={agenda.data ?? []}
+            colorPorEstado={COLOR_POR_ESTADO}
+            tramoResaltadoId={tramoSeleccionado?.ids[0]}
+            onSeleccionarTramo={setTramoSeleccionado}
+          />
+        )}
+
+        {tramoSeleccionado && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 p-3">
+            <div className="text-sm">
+              <p className="font-medium text-foreground capitalize">
+                {format(parseISO(tramoSeleccionado.fecha), "EEEE d 'de' MMMM", { locale: es })}
+              </p>
+              <p className="text-muted-foreground">
+                {tramoSeleccionado.horaInicio} – {tramoSeleccionado.horaFin} ·{" "}
+                <Badge variant={ESTADO_AGENDA_BADGE[tramoSeleccionado.estado].variant}>
+                  {ESTADO_AGENDA_BADGE[tramoSeleccionado.estado].label}
+                </Badge>
+                {tramoSeleccionado.estado === "reservado" && tramoSeleccionado.emprendimiento && (
+                  <> · {tramoSeleccionado.emprendimiento}</>
+                )}
+              </p>
+              {tramoSeleccionado.estado === "reservado" && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Ya está agendado — consulte el detalle completo desde "Asesorías" o "Mi calendario".
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-1">
+              {puedeEditar && tramoSeleccionado.estado !== "reservado" && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={cambiarEstado.isPending}
+                  onClick={() =>
+                    onCambiarEstadoTramo(
+                      tramoSeleccionado,
+                      tramoSeleccionado.estado === "disponible" ? "bloqueado" : "disponible",
+                    )
+                  }
+                >
+                  {tramoSeleccionado.estado === "disponible" ? (
+                    <Lock className="size-4" />
+                  ) : (
+                    <Unlock className="size-4" />
+                  )}
+                  {tramoSeleccionado.estado === "disponible" ? "Bloquear" : "Desbloquear"}
+                </Button>
+              )}
+              {puedeEliminar && tramoSeleccionado.estado !== "reservado" && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-destructive-700"
+                  disabled={eliminar.isPending}
+                  onClick={() => onEliminarTramo(tramoSeleccionado)}
+                >
+                  <Trash2 className="size-4" />
+                  Eliminar
+                </Button>
+              )}
+              <Button type="button" variant="ghost" size="icon" aria-label="Cerrar" onClick={() => setTramoSeleccionado(null)}>
+                <X className="size-4" />
+              </Button>
+            </div>
           </div>
         )}
       </CardContent>

@@ -3,6 +3,7 @@ import { formatDistanceToNow } from "date-fns"
 import { es } from "date-fns/locale"
 import { Bell } from "lucide-react"
 import { useNavigate } from "react-router-dom"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -18,6 +19,9 @@ import { useAuthStore } from "@/stores/auth-store"
 
 /** Tipos de notificación ligados a una asesoría: al hacer clic, llevan al calendario. */
 const TIPOS_CON_CALENDARIO = new Set(["agendamiento_asesoria", "recordatorio_asesoria"])
+
+/** Tipos de notificación ligados a un entregable: al hacer clic, llevan a su ficha. */
+const TIPOS_CON_ENTREGABLE = new Set(["recordatorio_entregable", "resultado_revision", "entrega_recibida"])
 
 /**
  * Centro de notificaciones, compartido entre el portal admin y el portal
@@ -36,10 +40,23 @@ export function NotificacionesPopover() {
   const noLeidas = data?.filter((n) => !n.leido).length ?? 0
 
   const alHacerClic = (notificacion: Notificacion) => {
-    if (!notificacion.leido) marcarLeida.mutate(notificacion.idNotificacion)
+    if (!notificacion.leido) {
+      marcarLeida.mutate(notificacion.idNotificacion, {
+        onError: () => toast.error("No se pudo marcar como leída. Intente de nuevo."),
+      })
+    }
+
     if (TIPOS_CON_CALENDARIO.has(notificacion.tipo)) {
       setOpen(false)
-      navigate(ambito === "emprendedor" ? "/emprendedor/calendario" : "/admin/calendario")
+      const base = ambito === "emprendedor" ? "/emprendedor/calendario" : "/admin/calendario"
+      navigate(notificacion.idAsesoria != null ? `${base}?idAsesoria=${notificacion.idAsesoria}` : base)
+      return
+    }
+
+    if (TIPOS_CON_ENTREGABLE.has(notificacion.tipo)) {
+      setOpen(false)
+      const base = ambito === "emprendedor" ? "/emprendedor/mis-entregables" : "/admin/entregables"
+      navigate(notificacion.idEntregable != null ? `${base}?idEntregable=${notificacion.idEntregable}` : base)
     }
   }
 
@@ -59,7 +76,11 @@ export function NotificacionesPopover() {
           {noLeidas > 0 && (
             <button
               type="button"
-              onClick={() => marcarTodas.mutate()}
+              onClick={() =>
+                marcarTodas.mutate(undefined, {
+                  onError: () => toast.error("No se pudo marcar todas como leídas. Intente de nuevo."),
+                })
+              }
               className="text-xs font-medium text-primary-700 hover:underline"
             >
               Marcar todas como leídas

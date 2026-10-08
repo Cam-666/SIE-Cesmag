@@ -57,7 +57,7 @@ export function EditarPerfilAdminDialog({ perfil }: { perfil: Usuario }) {
           Editar perfil
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Editar perfil</DialogTitle>
           <DialogDescription>

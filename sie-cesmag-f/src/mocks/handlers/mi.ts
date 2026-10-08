@@ -7,8 +7,9 @@ import { AGENDA } from "@/mocks/data/agenda"
 import { USUARIOS } from "@/mocks/data/usuarios"
 import { TOTAL_FASES } from "@/mocks/data/ruta"
 import type { EditarPerfilPayload } from "@/domain/emprendedor/types"
-import type { CargarEvidenciaPayload, EstadoRevision } from "@/domain/entregable/types"
+import type { EstadoRevision } from "@/domain/entregable/types"
 import type { AgendarAsesoriaPayload } from "@/domain/asesoria/types"
+import { resolverCadenaMock } from "@/mocks/utils/cadena-bloques"
 
 function estadoEmprendedor(estadoActividad: string, estadoRevision: EstadoRevision | null) {
   if (estadoRevision === "aprobado") return "aprobado" as const
@@ -109,24 +110,47 @@ export const miHandlers = [
     return HttpResponse.json(resultado)
   }),
 
-  // Registra un nuevo intento de entrega con la evidencia cargada.
+  // Registra un nuevo intento de entrega con la evidencia cargada — en real
+  // esto sube a Google Drive; en el mock, igual que antes de tener backend,
+  // basta con un blob: URL de la sesión (EvidenciaEnlace.tsx ya sabe abrirlo).
   http.post("/api/mi/entregables/:id/evidencia", async ({ params, request }) => {
     await delay(400)
     const entregable = ENTREGABLES.find((e) => e.idEntregable === Number(params.id))
     if (!entregable) {
       return HttpResponse.json({ message: "Entregable no encontrado" }, { status: 404 })
     }
-    const body = (await request.json()) as CargarEvidenciaPayload
+    const formulario = await request.formData()
+    const archivo = formulario.get("archivo") as File
+    const comentario = formulario.get("comentario") as string | null
     entregable.intentos.push({
       idIntentoEntrega: Date.now(),
       idEntregable: entregable.idEntregable,
-      rutaEvidencia: body.rutaEvidencia,
-      nombreArchivo: body.nombreArchivo,
+      rutaEvidencia: URL.createObjectURL(archivo),
+      nombreArchivo: archivo.name,
       fechaEntrega: new Date().toISOString(),
       estadoRevision: "pendiente",
-      observaciones: body.comentario ?? null,
+      observaciones: comentario || null,
     })
     entregable.estadoActividad = "entregado"
+    return HttpResponse.json({
+      ...entregable,
+      idEmprendimientoFase: entregable.idEmprendimiento * 100 + entregable.idFase,
+    })
+  }),
+
+  // Retracta el último intento mientras sigue pendiente de revisión.
+  http.delete("/api/mi/entregables/:id/evidencia", async ({ params }) => {
+    await delay(400)
+    const entregable = ENTREGABLES.find((e) => e.idEntregable === Number(params.id))
+    if (!entregable) {
+      return HttpResponse.json({ message: "Entregable no encontrado" }, { status: 404 })
+    }
+    const ultimo = entregable.intentos[entregable.intentos.length - 1] ?? null
+    if (!ultimo || ultimo.estadoRevision !== "pendiente") {
+      return HttpResponse.json({ message: "No hay una entrega pendiente de revisión para borrar." }, { status: 400 })
+    }
+    entregable.intentos.pop()
+    entregable.estadoActividad = new Date(entregable.fechaPrevista) < new Date() ? "no_entregado" : "pendiente"
     return HttpResponse.json({
       ...entregable,
       idEmprendimientoFase: entregable.idEmprendimiento * 100 + entregable.idFase,
@@ -149,29 +173,40 @@ export const miHandlers = [
   http.post("/api/mi/asesorias", async ({ request }) => {
     await delay(400)
     const body = (await request.json()) as AgendarAsesoriaPayload
-    const emprendimiento = EMPRENDIMIENTOS.find((e) => e.idEmprendimiento === MI_ID_EMPRENDIMIENTO)
-    const bloque = AGENDA.find((a) => a.idAgenda === body.idAgenda)
-    if (!bloque || bloque.estado !== "disponible") {
+    const yaTienePendiente = ASESORIAS.some(
+      (a) => a.idEmprendimiento === MI_ID_EMPRENDIMIENTO && a.estadoAsesoria === "programada",
+    )
+    if (yaTienePendiente) {
       return HttpResponse.json(
-        { message: "El horario seleccionado ya no está disponible" },
+        { message: "Ya tiene una asesoría programada pendiente de resultado." },
+        { status: 409 },
+      )
+    }
+    const emprendimiento = EMPRENDIMIENTOS.find((e) => e.idEmprendimiento === MI_ID_EMPRENDIMIENTO)
+    const cadena = resolverCadenaMock(AGENDA, body.idAgenda, body.duracionMinutos)
+    if (!cadena) {
+      return HttpResponse.json(
+        { message: "No hay disponibilidad continua suficiente para esa duración." },
         { status: 400 },
       )
     }
-    bloque.estado = "reservado"
+    cadena.forEach((b) => (b.estado = "reservado"))
+    const bloque = cadena[0]
     const asesor = USUARIOS.find((u) => u.idUsuario === Number(bloque.idUsuario))
 
     const nueva = {
       idAsesoria: Date.now(),
       idEmprendimiento: MI_ID_EMPRENDIMIENTO,
-      fechaAsesoria: `${bloque.fecha}T${bloque.horaInicio}:00`,
+      fechaAsesoria: `${bloque.fecha}T${bloque.horaInicio}:00.000Z`,
       emprendimiento: emprendimiento?.nombreReferencia ?? "—",
       asesor: asesor?.nombre ?? "—",
       tipoAsesoria: body.tipoAsesoria,
-      modalidad: "virtual" as const,
+      modalidad: body.modalidad,
       estadoAsesoria: "programada" as const,
       avance: null,
       observaciones: body.motivo,
       idAgenda: bloque.idAgenda,
+      duracionMinutos: body.duracionMinutos,
     }
     ASESORIAS.unshift(nueva)
     return HttpResponse.json(nueva, { status: 201 })

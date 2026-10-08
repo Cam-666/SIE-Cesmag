@@ -53,6 +53,11 @@ export interface FiltrosEntregables {
   estado?: EstadoRevision | "todos"
 }
 
+/** Entregable de las etapas donde el usuario administrativo es responsable — para "Mi calendario". */
+export interface EntregableComoResponsable extends EntregableListado {
+  fechaPrevista: string
+}
+
 /** Registro de un entregable asignado a un emprendimiento y fase. */
 export interface NuevoEntregablePayload {
   idEmprendimiento: Id
@@ -89,14 +94,13 @@ export interface MiEntregableListado {
 }
 
 /**
- * Cargar el archivo de evidencia de un entregable abierto. `rutaEvidencia`
- * y `nombreArchivo` los produce la subida a la nube (ver
- * `lib/almacenamiento-nube.ts`) antes de llamar a esta mutación: el
- * emprendedor selecciona un archivo, nunca escribe un enlace a mano.
+ * Cargar el archivo de evidencia de un entregable abierto: el emprendedor
+ * selecciona un archivo, nunca escribe un enlace a mano. El archivo viaja al
+ * backend tal cual (`multipart/form-data`) — sube a Google Drive desde ahí,
+ * nunca directo desde el navegador (ver `domain/entregable/api.ts`).
  */
 export interface CargarEvidenciaPayload {
   idEntregable: Id
-  rutaEvidencia: string
-  nombreArchivo: string
+  archivo: File
   comentario?: string
 }

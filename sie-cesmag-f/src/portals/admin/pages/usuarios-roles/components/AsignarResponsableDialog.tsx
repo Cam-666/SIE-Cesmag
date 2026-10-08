@@ -62,7 +62,7 @@ export function AsignarResponsableDialog({ etapa, idUsuarioActual }: AsignarResp
           {idUsuarioActual ? "Cambiar" : "Asignar"}
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Responsable de la etapa</DialogTitle>
           <DialogDescription>
@@ -82,7 +82,7 @@ export function AsignarResponsableDialog({ etapa, idUsuarioActual }: AsignarResp
                   </SelectTrigger>
                   <SelectContent>
                     {usuarios.data
-                      ?.filter((u) => u.activo)
+                      ?.filter((u) => u.activo && u.rol?.ambito === "admin")
                       .map((u) => (
                         <SelectItem key={u.idUsuario} value={String(u.idUsuario)}>
                           {u.nombre}

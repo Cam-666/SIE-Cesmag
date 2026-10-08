@@ -11,6 +11,7 @@ import { StatCard } from "@/components/shared/StatCard"
 import { useMiDashboardQuery } from "@/domain/emprendedor/queries"
 import { ESTADO_ENTREGABLE_EMPRENDEDOR_BADGE } from "@/domain/entregable/display"
 import { useAuthStore } from "@/stores/auth-store"
+import { fechaAsesoriaComoLocal } from "@/lib/fecha-asesoria"
 
 /** Estado actual del proceso del emprendedor. */
 export function DashboardPage() {
@@ -149,7 +150,7 @@ export function DashboardPage() {
                 <div>
                   <p className="text-sm font-medium text-foreground">{data.proximaAsesoria.titulo}</p>
                   <p className="text-sm text-muted-foreground">
-                    {format(new Date(data.proximaAsesoria.fechaAsesoria), "d 'de' MMMM, h:mm a", {
+                    {format(fechaAsesoriaComoLocal(data.proximaAsesoria.fechaAsesoria), "d 'de' MMMM, h:mm a", {
                       locale: es,
                     })}{" "}
                     · {data.proximaAsesoria.asesor}

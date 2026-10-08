@@ -23,21 +23,21 @@ function periodoDeUrl(url: URL): FiltroPeriodo | undefined {
 const PROXIMAS_ASESORIAS: ProximaAsesoriaResumen[] = [
   {
     idAsesoria: 1,
-    fechaAsesoria: "2026-09-16T10:00:00",
+    fechaAsesoria: "2026-09-16T10:00:00Z",
     asesor: "María López",
     emprendimiento: "EcoPack Solutions",
     estadoAsesoria: "programada",
   },
   {
     idAsesoria: 2,
-    fechaAsesoria: "2026-09-17T16:00:00",
+    fechaAsesoria: "2026-09-17T16:00:00Z",
     asesor: "Carlos Ruiz",
     emprendimiento: "Diseño & Estilo",
     estadoAsesoria: "programada",
   },
   {
     idAsesoria: 3,
-    fechaAsesoria: "2026-09-18T15:00:00",
+    fechaAsesoria: "2026-09-18T15:00:00Z",
     asesor: "Ana Gómez",
     emprendimiento: "Sweet Bakery",
     estadoAsesoria: "programada",
@@ -104,5 +104,24 @@ export const indicadoresHandlers = [
   http.get("/api/dashboard/entregables-recientes", async () => {
     await delay(400)
     return HttpResponse.json(ENTREGABLES_RECIENTES)
+  }),
+
+  // Datos de ejemplo fijos: sin estos dos handlers la petición caía al servidor
+  // de Vite (HTML) y el gráfico de tendencia reventaba al intentar mapear el resultado.
+  http.get("/api/indicadores/tendencia-mensual", async () => {
+    await delay(400)
+    return HttpResponse.json([
+      { mes: "2026-04", ingresos: 4, culminaciones: 0 },
+      { mes: "2026-05", ingresos: 3, culminaciones: 1 },
+      { mes: "2026-06", ingresos: 5, culminaciones: 0 },
+      { mes: "2026-07", ingresos: 2, culminaciones: 1 },
+      { mes: "2026-08", ingresos: 4, culminaciones: 2 },
+      { mes: "2026-09", ingresos: 3, culminaciones: 1 },
+    ])
+  }),
+
+  http.get("/api/indicadores/tasa-aprobacion-entregables", async () => {
+    await delay(400)
+    return HttpResponse.json({ aprobados: 6, rechazados: 2, tasaAprobacion: 75 })
   }),
 ]

@@ -4,7 +4,7 @@ import { persistir } from "@/mocks/storage"
 /**
  * Bloques de disponibilidad con fecha concreta, mutable. `idUsuario`
  * coincide con las cuentas demo administrativas: 1 = Carlos Andrés Ruiz
- * (Coordinador), 4 = María López (Empleado). El emprendedor puede agendar
+ * (Coordinador), 4 = María López (Administrativo). El emprendedor puede agendar
  * contra la agenda de cualquier miembro del equipo con disponibilidad.
  */
 export const AGENDA: Agenda[] = persistir("agenda", [

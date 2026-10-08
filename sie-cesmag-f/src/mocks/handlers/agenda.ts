@@ -26,20 +26,35 @@ export const agendaHandlers = [
     return HttpResponse.json(ordenar(resultado))
   }),
 
+  // Trocea el rango en bloques atómicos de 15 min, igual que el backend real.
   http.post("/api/agenda/mia", async ({ request }) => {
     await delay(300)
     const idUsuario = idUsuarioActual(request)
     const body = (await request.json()) as NuevoBloqueAgendaPayload
-    const nuevo = {
-      idAgenda: Date.now(),
-      idUsuario: String(idUsuario),
-      fecha: body.fecha,
-      horaInicio: body.horaInicio,
-      horaFin: body.horaFin,
-      estado: "disponible" as const,
+    const GRANULARIDAD_MINUTOS = 15
+    const [hIni, mIni] = body.horaInicio.split(":").map(Number)
+    const [hFin, mFin] = body.horaFin.split(":").map(Number)
+    const inicio = hIni * 60 + mIni
+    const fin = hFin * 60 + mFin
+    const aTexto = (min: number) => `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`
+
+    const creados: (typeof AGENDA)[number][] = []
+    for (let t = inicio; t + GRANULARIDAD_MINUTOS <= fin; t += GRANULARIDAD_MINUTOS) {
+      const nuevo = {
+        idAgenda: Date.now() + t,
+        idUsuario: String(idUsuario),
+        fecha: body.fecha,
+        horaInicio: aTexto(t),
+        horaFin: aTexto(t + GRANULARIDAD_MINUTOS),
+        estado: "disponible" as const,
+      }
+      AGENDA.push(nuevo)
+      creados.push(nuevo)
     }
-    AGENDA.push(nuevo)
-    return HttpResponse.json(nuevo, { status: 201 })
+    if (creados.length === 0) {
+      return HttpResponse.json({ message: "El rango de horario debe ser de al menos 15 minutos." }, { status: 400 })
+    }
+    return HttpResponse.json(creados, { status: 201 })
   }),
 
   http.patch("/api/agenda/mia/:id", async ({ params, request }) => {

@@ -18,7 +18,7 @@ import { useAuthStore } from "@/stores/auth-store"
 /** Rutas fuera del sidebar (no son "módulos" con permisos propios): título del topbar. */
 const TITULOS_RUTAS_SIN_MODULO: Record<string, string> = {
   "/admin/mi-perfil": "Mi perfil",
-  "/admin/calendario": "Calendario",
+  "/admin/calendario": "Mi calendario",
 }
 
 function iniciales(nombre: string) {
@@ -46,7 +46,7 @@ export function AdminTopbar({ onAbrirMenuMovil }: { onAbrirMenuMovil: () => void
   }
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-background px-4 sm:px-6">
+    <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-background px-4 sm:px-6 print:hidden">
       <div className="flex items-center gap-2">
         <Button
           variant="ghost"

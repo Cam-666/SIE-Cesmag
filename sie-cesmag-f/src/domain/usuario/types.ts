@@ -1,7 +1,7 @@
 import type { FechaISO, Id } from "@/types/common"
 
 /**
- * Módulos del portal administrativo (Vicerrector / Coordinador / Empleado),
+ * Módulos del portal administrativo (Vicerrector / Coordinador / Administrativo),
  * usados para el control de permisos granular por módulo.
  * Coinciden 1 a 1 con las secciones del sidebar admin.
  */
@@ -25,7 +25,7 @@ export interface PermisoModulo {
  * Ámbito del rol: decide a qué portal redirige el login. No es una columna
  * de la tabla ROL; se infiere en el frontend porque los roles son
  * administrables dinámicamente y pueden incluir roles futuros además de
- * los 3 base (Vicerrector, Coordinador, Empleado).
+ * los 3 base (Vicerrector, Coordinador, Administrativo).
  */
 export type AmbitoRol = "admin" | "emprendedor"
 

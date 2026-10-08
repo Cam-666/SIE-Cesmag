@@ -7,15 +7,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { StatCard } from "@/components/shared/StatCard"
-import { BarList } from "@/components/shared/BarList"
+import { DonutChart } from "@/components/shared/DonutChart"
+import { TendenciaMensualChart } from "@/components/shared/TendenciaMensualChart"
 import {
   useDistribucionPorEtapaQuery,
   useEntregablesRecientesQuery,
   useProximasAsesoriasQuery,
   useResumenIndicadoresQuery,
+  useTendenciaMensualQuery,
 } from "@/domain/indicadores/queries"
 import { ESTADO_ASESORIA_BADGE } from "@/domain/asesoria/display"
 import { ESTADO_ACTIVIDAD_BADGE } from "@/domain/entregable/display"
+import { fechaAsesoriaComoLocal } from "@/lib/fecha-asesoria"
 
 function ErrorInline({ mensaje }: { mensaje: string }) {
   return (
@@ -32,6 +35,7 @@ export function DashboardPage() {
   const navigate = useNavigate()
   const resumen = useResumenIndicadoresQuery()
   const distribucion = useDistribucionPorEtapaQuery()
+  const tendencia = useTendenciaMensualQuery()
   const proximasAsesorias = useProximasAsesoriasQuery()
   const entregablesRecientes = useEntregablesRecientesQuery()
 
@@ -67,7 +71,7 @@ export function DashboardPage() {
           accent="primary"
         />
         <StatCard
-          label="Compromisos (entregables)"
+          label="Entregables"
           value={resumen.data?.compromisos ?? "—"}
           icon={FileCheck2}
           loading={resumen.isPending}
@@ -76,6 +80,17 @@ export function DashboardPage() {
       </div>
 
       {resumen.isError && <ErrorInline mensaje="No fue posible obtener los indicadores." />}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Ingresos y culminaciones por mes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {tendencia.isPending && <Skeleton className="h-44 w-full" />}
+          {tendencia.isError && <ErrorInline mensaje="No fue posible obtener la tendencia mensual." />}
+          {tendencia.data && <TendenciaMensualChart datos={tendencia.data} />}
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
@@ -99,7 +114,7 @@ export function DashboardPage() {
             )}
 
             {distribucion.data && distribucion.data.length > 0 && (
-              <BarList
+              <DonutChart
                 items={distribucion.data.map((etapa) => ({
                   id: etapa.idEtapa,
                   label: etapa.nombreEtapa,
@@ -138,7 +153,7 @@ export function DashboardPage() {
                     {asesoria.emprendimiento}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {format(new Date(asesoria.fechaAsesoria), "d 'de' MMMM, h:mm a", {
+                    {format(fechaAsesoriaComoLocal(asesoria.fechaAsesoria), "d 'de' MMMM, h:mm a", {
                       locale: es,
                     })}{" "}
                     · {asesoria.asesor}

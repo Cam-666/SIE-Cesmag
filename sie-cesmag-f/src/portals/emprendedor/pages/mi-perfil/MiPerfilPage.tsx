@@ -1,4 +1,5 @@
-import { AlertTriangle } from "lucide-react"
+import { AlertTriangle, CalendarDays, ChevronRight } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { EmptyState } from "@/components/shared/EmptyState"
@@ -17,6 +18,7 @@ function iniciales(nombre: string) {
 /** Consulta y edición de los datos personales del emprendedor. */
 export function MiPerfilPage() {
   const { data, isPending, isError } = useMiPerfilQuery()
+  const navigate = useNavigate()
 
   if (isPending) {
     return (
@@ -54,6 +56,23 @@ export function MiPerfilPage() {
           </div>
         </CardContent>
       </Card>
+
+      <button
+        type="button"
+        onClick={() => navigate("/emprendedor/calendario")}
+        className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-left shadow-xs ring-1 ring-foreground/10 transition-colors hover:bg-muted"
+      >
+        <div className="flex items-center gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-700/10 text-primary-700">
+            <CalendarDays className="size-5" />
+          </span>
+          <div>
+            <p className="text-sm font-medium text-foreground">Mi calendario</p>
+            <p className="text-xs text-muted-foreground">Vista mensual de sus asesorías programadas.</p>
+          </div>
+        </div>
+        <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+      </button>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">

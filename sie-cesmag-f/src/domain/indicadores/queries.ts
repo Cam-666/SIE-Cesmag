@@ -7,6 +7,8 @@ import {
   obtenerProximasAsesorias,
   obtenerResumenIndicadores,
   obtenerRetencionDesercion,
+  obtenerTasaAprobacionEntregables,
+  obtenerTendenciaMensual,
   obtenerTiempoPermanencia,
 } from "@/domain/indicadores/api"
 import type { FiltroPeriodo } from "@/domain/indicadores/types"
@@ -52,6 +54,22 @@ export function useTiempoPermanenciaQuery(periodo?: FiltroPeriodo) {
   return useQuery({
     queryKey: ["indicadores", "tiempo-permanencia", periodo],
     queryFn: () => obtenerTiempoPermanencia(periodo),
+  })
+}
+
+/** Ingresos y culminaciones por mes (RF-17). */
+export function useTendenciaMensualQuery(periodo?: FiltroPeriodo) {
+  return useQuery({
+    queryKey: ["indicadores", "tendencia-mensual", periodo],
+    queryFn: () => obtenerTendenciaMensual(periodo),
+  })
+}
+
+/** % de entregables aprobados sobre el total ya revisado. */
+export function useTasaAprobacionEntregablesQuery(periodo?: FiltroPeriodo) {
+  return useQuery({
+    queryKey: ["indicadores", "tasa-aprobacion-entregables", periodo],
+    queryFn: () => obtenerTasaAprobacionEntregables(periodo),
   })
 }
 

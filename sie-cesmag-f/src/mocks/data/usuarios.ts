@@ -33,7 +33,7 @@ export const ROLES: Rol[] = persistir("roles", [
   },
   {
     idRol: 3,
-    nombre: "Empleado",
+    nombre: "Administrativo",
     descripcion: "Acompañamiento operativo: seguimiento de asesorías y entregables asignados.",
     activo: true,
     ambito: "admin",

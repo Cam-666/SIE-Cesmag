@@ -47,14 +47,18 @@ export async function crearEmprendimiento(
   return data
 }
 
-/** Agrega un integrante a un emprendimiento existente. */
+/**
+ * Agrega un integrante a un emprendimiento existente. `nombre`/`correo` son
+ * necesarios solo si la persona no existe todavía en el sistema (ver
+ * `agregarIntegranteSchema`).
+ */
 export async function agregarIntegrante(
   idEmprendimiento: number,
-  numeroIdentificacion: string,
+  payload: { numeroIdentificacion: string; nombre?: string; correo?: string },
 ): Promise<IntegranteEmprendimiento> {
   const { data } = await apiClient.post<IntegranteEmprendimiento>(
     `/emprendimientos/${idEmprendimiento}/integrantes`,
-    { numeroIdentificacion },
+    payload,
   )
   return data
 }

@@ -16,7 +16,7 @@ export interface AdminNavItem {
   icon: LucideIcon
 }
 
-/** Ítems del sidebar admin, en el orden del wireframe (Vicerrector/Coordinador/Empleado). */
+/** Ítems del sidebar admin, en el orden del wireframe (Vicerrector/Coordinador/Administrativo). */
 export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { modulo: "dashboard", label: "Dashboard", to: "/admin/dashboard", icon: LayoutDashboard },
   {

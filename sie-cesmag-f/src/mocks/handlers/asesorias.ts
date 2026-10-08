@@ -12,12 +12,13 @@ import { AGENDA } from "@/mocks/data/agenda"
 import { USUARIOS } from "@/mocks/data/usuarios"
 import { MI_ID_EMPRENDIMIENTO } from "@/mocks/data/mi-perfil"
 import { NOTIFICACIONES_EMPRENDEDOR } from "@/mocks/data/notificaciones"
-import { usuarioActual } from "@/mocks/utils/usuario-actual"
+import { idUsuarioActual, usuarioActual } from "@/mocks/utils/usuario-actual"
+import { resolverCadenaMock, resolverCadenaReservadaMock } from "@/mocks/utils/cadena-bloques"
 
 const HISTORIAL_ECOPACK: AsesoriaHistorialItem[] = [
   {
     idAsesoria: 1,
-    fechaAsesoria: "2026-09-15T10:00:00",
+    fechaAsesoria: "2026-09-15T10:00:00Z",
     asesor: "María López",
     faseNombre: "4. Ideación Estratégica",
     titulo: "Validación de propuesta de valor",
@@ -35,7 +36,7 @@ const HISTORIAL_ECOPACK: AsesoriaHistorialItem[] = [
   },
   {
     idAsesoria: 2,
-    fechaAsesoria: "2026-09-08T11:00:00",
+    fechaAsesoria: "2026-09-08T11:00:00Z",
     asesor: "Juan Pérez",
     faseNombre: "2. Empatía",
     titulo: "Validación de problema",
@@ -96,24 +97,38 @@ export const asesoriasHandlers = [
     )
   }),
 
+  /** Asesorías propias del usuario administrativo autenticado, como asesor — para "Mi calendario". */
+  http.get("/api/asesorias/mias", async ({ request }) => {
+    await delay(400)
+    const idUsuario = idUsuarioActual(request)
+    const resultado = ASESORIAS.filter((a) => {
+      const bloque = AGENDA.find((b) => b.idAgenda === a.idAgenda)
+      return bloque?.idUsuario === String(idUsuario)
+    })
+    return HttpResponse.json(
+      [...resultado].sort((a, b) => new Date(b.fechaAsesoria).getTime() - new Date(a.fechaAsesoria).getTime()),
+    )
+  }),
+
   http.post("/api/asesorias", async ({ request }) => {
     await delay(400)
     const body = (await request.json()) as NuevaAsesoriaPayload
     const emprendimiento = EMPRENDIMIENTOS.find((e) => e.idEmprendimiento === body.idEmprendimiento)
-    const bloque = AGENDA.find((a) => a.idAgenda === body.idAgenda)
-    if (!bloque || bloque.estado !== "disponible") {
+    const cadena = resolverCadenaMock(AGENDA, body.idAgenda, body.duracionMinutos)
+    if (!cadena) {
       return HttpResponse.json(
-        { message: "El horario seleccionado ya no está disponible" },
+        { message: "No hay disponibilidad continua suficiente para esa duración." },
         { status: 400 },
       )
     }
-    bloque.estado = "reservado"
+    cadena.forEach((b) => (b.estado = "reservado"))
+    const bloque = cadena[0]
     const asesor = usuarioActual(request)
 
     const nueva = {
       idAsesoria: Date.now(),
       idEmprendimiento: body.idEmprendimiento,
-      fechaAsesoria: `${bloque.fecha}T${bloque.horaInicio}:00`,
+      fechaAsesoria: `${bloque.fecha}T${bloque.horaInicio}:00.000Z`,
       emprendimiento: emprendimiento?.nombreReferencia ?? "—",
       asesor: asesor.nombre,
       tipoAsesoria: body.tipoAsesoria,
@@ -122,6 +137,7 @@ export const asesoriasHandlers = [
       avance: null,
       observaciones: null,
       idAgenda: bloque.idAgenda,
+      duracionMinutos: body.duracionMinutos,
     }
     ASESORIAS.unshift(nueva)
 
@@ -131,6 +147,7 @@ export const asesoriasHandlers = [
       NOTIFICACIONES_EMPRENDEDOR.unshift({
         idNotificacion: Date.now(),
         idAsesoria: nueva.idAsesoria,
+        idEntregable: null,
         tipo: "agendamiento_asesoria",
         mensaje: `El coordinador agendó una asesoría para el ${format(new Date(nueva.fechaAsesoria), "d 'de' MMMM", { locale: es })} a las ${format(new Date(nueva.fechaAsesoria), "h:mm a")}.`,
         leido: false,
@@ -153,26 +170,29 @@ export const asesoriasHandlers = [
     }
     if (body.accion === "cancelar") {
       asesoria.estadoAsesoria = "cancelada"
-      // Libera el bloque de agenda para que vuelva a quedar disponible.
+      // Libera toda la cadena de bloques reservados, no solo el ancla.
       if (asesoria.idAgenda) {
-        const bloqueAnterior = AGENDA.find((a) => a.idAgenda === asesoria.idAgenda)
-        if (bloqueAnterior) bloqueAnterior.estado = "disponible"
+        resolverCadenaReservadaMock(AGENDA, asesoria.idAgenda, asesoria.duracionMinutos).forEach(
+          (b) => (b.estado = "disponible"),
+        )
       }
     } else if (body.nuevoIdAgenda) {
-      const bloqueNuevo = AGENDA.find((a) => a.idAgenda === body.nuevoIdAgenda)
-      if (!bloqueNuevo || bloqueNuevo.estado !== "disponible") {
+      const nuevaCadena = resolverCadenaMock(AGENDA, body.nuevoIdAgenda, asesoria.duracionMinutos)
+      if (!nuevaCadena) {
         return HttpResponse.json(
           { message: "El horario seleccionado ya no está disponible" },
           { status: 400 },
         )
       }
-      // Libera el bloque anterior y reserva el nuevo.
+      // Libera la cadena anterior y reserva la nueva.
       if (asesoria.idAgenda) {
-        const bloqueAnterior = AGENDA.find((a) => a.idAgenda === asesoria.idAgenda)
-        if (bloqueAnterior) bloqueAnterior.estado = "disponible"
+        resolverCadenaReservadaMock(AGENDA, asesoria.idAgenda, asesoria.duracionMinutos).forEach(
+          (b) => (b.estado = "disponible"),
+        )
       }
-      bloqueNuevo.estado = "reservado"
-      asesoria.fechaAsesoria = `${bloqueNuevo.fecha}T${bloqueNuevo.horaInicio}:00`
+      nuevaCadena.forEach((b) => (b.estado = "reservado"))
+      const bloqueNuevo = nuevaCadena[0]
+      asesoria.fechaAsesoria = `${bloqueNuevo.fecha}T${bloqueNuevo.horaInicio}:00.000Z`
       asesoria.asesor = USUARIOS.find((u) => u.idUsuario === Number(bloqueNuevo.idUsuario))?.nombre ?? asesoria.asesor
       asesoria.idAgenda = bloqueNuevo.idAgenda
       asesoria.estadoAsesoria = "programada"

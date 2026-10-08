@@ -18,7 +18,12 @@ export interface Agenda {
   asesorNombre?: string
 }
 
-/** Nuevo bloque de disponibilidad con fecha concreta (no recurrente). */
+/**
+ * Nuevo rango de disponibilidad con fecha concreta (no recurrente). El
+ * backend lo trocea siempre en bloques atómicos de 15 minutos — quien agenda
+ * elige la duración real (ver `DURACIONES_ASESORIA_MINUTOS` en
+ * `domain/asesoria/types.ts`), no el coordinador al crear el rango.
+ */
 export interface NuevoBloqueAgendaPayload {
   fecha: string
   horaInicio: string

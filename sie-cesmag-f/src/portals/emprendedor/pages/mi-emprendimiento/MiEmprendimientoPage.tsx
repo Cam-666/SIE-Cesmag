@@ -34,7 +34,9 @@ export function MiEmprendimientoPage() {
     )
   }
 
-  const etapaActualNombre = data.ruta.find((e) => e.fases.some((f) => f.estadoFase === "en_curso"))?.nombre
+  const etapaActualNombre = data.ruta.find((e) =>
+    e.fases.some((f) => f.estadoFase === "en_curso" || f.estadoFase === "pausada"),
+  )?.nombre
   const faseActualNombre = data.faseActual?.fase
     ? `${data.faseActual.fase.numero}. ${data.faseActual.fase.nombre}`
     : "—"
