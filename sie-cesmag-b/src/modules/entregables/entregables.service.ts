@@ -72,9 +72,16 @@ function estadoEmprendedorDe(estadoActividad: EstadoActividad, estadoRevisionUlt
   return "pendiente"
 }
 
-/** Listado general de entregables. */
-export async function listarEntregables(filtros: { estado?: string }) {
+/**
+ * Listado general de entregables. `idsEtapaResponsable` no vacío restringe a
+ * los de esas etapas — ver "Responsables por etapa" en Usuarios y Roles.
+ */
+export async function listarEntregables(filtros: { estado?: string }, idsEtapaResponsable?: number[]) {
   const entregables = await prisma.entregable.findMany({
+    where:
+      idsEtapaResponsable && idsEtapaResponsable.length > 0
+        ? { emprendimientoFase: { fase: { idEtapa: { in: idsEtapaResponsable } } } }
+        : undefined,
     include: incluirCompleto,
     orderBy: { fechaPrevista: "desc" },
   })
@@ -103,7 +110,13 @@ export async function listarEntregablesComoResponsable(idUsuario: string) {
 }
 
 /** Entregables de una fase específica de un emprendimiento (drill-down `FaseEntregablesDialog`). */
-export async function listarEntregablesPorFase(idEmprendimiento: number, idFase: number) {
+export async function listarEntregablesPorFase(idEmprendimiento: number, idFase: number, idsEtapaResponsable?: number[]) {
+  if (idsEtapaResponsable && idsEtapaResponsable.length > 0) {
+    const fase = await prisma.fase.findUnique({ where: { idFase }, select: { idEtapa: true } })
+    if (!fase || !idsEtapaResponsable.includes(fase.idEtapa)) {
+      throw new ErrorApi(403, "No tiene acceso a esta fase.")
+    }
+  }
   const entregables = await prisma.entregable.findMany({
     where: { emprendimientoFase: { idEmprendimiento, idFase } },
     include: incluirCompleto,
@@ -113,10 +126,13 @@ export async function listarEntregablesPorFase(idEmprendimiento: number, idFase:
 }
 
 /** Detalle de un entregable — compartido entre `EntregableRevisionDialog` (admin) y `CargarEvidenciaDialog` (emprendedor). */
-export async function obtenerEntregable(idEntregable: number) {
+export async function obtenerEntregable(idEntregable: number, idsEtapaResponsable?: number[]) {
   const entregable = await prisma.entregable.findUnique({ where: { idEntregable }, include: incluirCompleto })
   if (!entregable) {
     throw new ErrorApi(404, "Entregable no encontrado.")
+  }
+  if (idsEtapaResponsable && idsEtapaResponsable.length > 0 && !idsEtapaResponsable.includes(entregable.emprendimientoFase.fase.idEtapa)) {
+    throw new ErrorApi(403, "No tiene acceso a este entregable.")
   }
   return entregableADetalle(entregable)
 }
@@ -129,13 +145,16 @@ export async function obtenerEntregable(idEntregable: number) {
  * (`subirArchivoADrive`), así que a diferencia de Supabase no hace falta
  * firmar nada ni hay vencimiento.
  */
-export async function obtenerUrlEvidencia(idEntregable: number) {
+export async function obtenerUrlEvidencia(idEntregable: number, idsEtapaResponsable?: number[]) {
   const entregable = await prisma.entregable.findUnique({
     where: { idEntregable },
-    include: { intentos: { orderBy: { idIntentoEntrega: "asc" } } },
+    include: { intentos: { orderBy: { idIntentoEntrega: "asc" } }, emprendimientoFase: { include: { fase: true } } },
   })
   if (!entregable) {
     throw new ErrorApi(404, "Entregable no encontrado.")
+  }
+  if (idsEtapaResponsable && idsEtapaResponsable.length > 0 && !idsEtapaResponsable.includes(entregable.emprendimientoFase.fase.idEtapa)) {
+    throw new ErrorApi(403, "No tiene acceso a este entregable.")
   }
   const ultimo = entregable.intentos[entregable.intentos.length - 1] ?? null
   if (!ultimo) {
@@ -149,13 +168,16 @@ export async function obtenerUrlEvidencia(idEntregable: number) {
  * `idFase` (catálogo) a la fila EMPRENDIMIENTO_FASE real; si no existe es
  * porque el emprendimiento todavía no tiene diagnóstico inicial registrado.
  */
-export async function crearEntregable(payload: {
-  idEmprendimiento: number
-  idFase: number
-  titulo: string
-  descripcion: string
-  fechaPrevista: string
-}) {
+export async function crearEntregable(
+  payload: {
+    idEmprendimiento: number
+    idFase: number
+    titulo: string
+    descripcion: string
+    fechaPrevista: string
+  },
+  idsEtapaResponsable?: number[],
+) {
   const emprendimientoFase = await prisma.emprendimientoFase.findUnique({
     where: { idEmprendimiento_idFase: { idEmprendimiento: payload.idEmprendimiento, idFase: payload.idFase } },
     include: { fase: { include: { etapa: true } } },
@@ -165,6 +187,9 @@ export async function crearEntregable(payload: {
       400,
       "Este emprendimiento todavía no tiene esa fase en su ruta. Registre el diagnóstico inicial antes de asignar entregables.",
     )
+  }
+  if (idsEtapaResponsable && idsEtapaResponsable.length > 0 && !idsEtapaResponsable.includes(emprendimientoFase.fase.idEtapa)) {
+    throw new ErrorApi(403, "No tiene acceso a esta fase.")
   }
   if (emprendimientoFase.estadoFase === "completada") {
     throw new ErrorApi(400, "Esta fase ya está completada — no se le pueden asignar más entregables.")

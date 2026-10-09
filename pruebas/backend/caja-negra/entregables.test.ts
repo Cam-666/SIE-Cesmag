@@ -72,7 +72,11 @@ import { prisma } from "@/lib/prisma.js"
 const app = crearApp()
 const prismaMock = prisma as unknown as DeepMockProxy<PrismaClient>
 
-beforeEach(() => mockReset(prismaMock))
+beforeEach(() => {
+  mockReset(prismaMock)
+  // Alcance por etapa (responsables.service): sin etapas asignadas = sin restricción, como antes.
+  prismaMock.etapa.findMany.mockResolvedValue([])
+})
 
 describe("GET /api/entregables (RF-04/HU-08)", () => {
   it("CP-CN-001 — entrada válida: con sesión y permiso, responde 200 con el listado", async () => {

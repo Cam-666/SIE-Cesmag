@@ -20,12 +20,25 @@ function fecha(d: Date | null) {
   return d ? d.toISOString().slice(0, 10) : null
 }
 
-/** Listado con filtros — trae la fase actual de cada uno para pintar la tabla. */
-export async function listarEmprendimientos(filtros: { busqueda?: string; estado?: string }) {
+/**
+ * Listado con filtros — trae la fase actual de cada uno para pintar la tabla.
+ * Si `idsEtapaResponsable` llega no vacío, el usuario es responsable de esas
+ * etapas y solo debe ver emprendimientos cuya fase en curso esté ahí (ver
+ * "Responsables por etapa" en Usuarios y Roles); vacío o ausente = sin
+ * restricción, como antes.
+ */
+export async function listarEmprendimientos(filtros: { busqueda?: string; estado?: string }, idsEtapaResponsable?: number[]) {
   const emprendimientos = await prisma.emprendimiento.findMany({
     where: {
       ...(filtros.estado && filtros.estado !== "todos" ? { estado: filtros.estado as Prisma.EnumEstadoEmprendimientoFilter } : {}),
       ...(filtros.busqueda ? { nombreReferencia: { contains: filtros.busqueda, mode: "insensitive" as const } } : {}),
+      ...(idsEtapaResponsable && idsEtapaResponsable.length > 0
+        ? {
+            emprendimientoFase: {
+              some: { estadoFase: { in: ["en_curso", "pausada"] }, fase: { idEtapa: { in: idsEtapaResponsable } } },
+            },
+          }
+        : {}),
     },
     orderBy: { fechaIngreso: "desc" },
   })
@@ -56,14 +69,29 @@ export async function listarEmprendimientos(filtros: { busqueda?: string; estado
   )
 }
 
-/** Detalle completo + ruta metodológica. */
-export async function obtenerDetalle(idEmprendimiento: number) {
+/**
+ * Detalle completo + ruta metodológica. `idsEtapaResponsable` solo lo pasa la
+ * ruta de lectura del admin (no las operaciones internas que reconstruyen el
+ * detalle tras una mutación) — si llega no vacío y la fase en curso del
+ * emprendimiento no está en esas etapas, no tiene acceso.
+ */
+export async function obtenerDetalle(idEmprendimiento: number, idsEtapaResponsable?: number[]) {
   const emprendimiento = await prisma.emprendimiento.findUnique({
     where: { idEmprendimiento },
     include: incluirIntegrantes,
   })
   if (!emprendimiento) {
     throw new ErrorApi(404, "Emprendimiento no encontrado.")
+  }
+
+  if (idsEtapaResponsable && idsEtapaResponsable.length > 0) {
+    const faseEnCurso = await prisma.emprendimientoFase.findFirst({
+      where: { idEmprendimiento, estadoFase: { in: ["en_curso", "pausada"] } },
+      select: { fase: { select: { idEtapa: true } } },
+    })
+    if (!faseEnCurso || !idsEtapaResponsable.includes(faseEnCurso.fase.idEtapa)) {
+      throw new ErrorApi(403, "No tiene acceso a este emprendimiento.")
+    }
   }
 
   const [caracterizacionFila, rutaInfo] = await Promise.all([

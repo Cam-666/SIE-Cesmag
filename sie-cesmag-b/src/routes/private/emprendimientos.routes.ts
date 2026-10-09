@@ -1,6 +1,7 @@
 import { Router } from "express"
 import { requiereSesion } from "../../middleware/auth.js"
 import { requierePermiso } from "../../middleware/permisos.js"
+import { etapasResponsableDe } from "../../lib/alcanceResponsable.js"
 import * as emprendimientosSvc from "../../modules/emprendimientos/emprendimientos.service.js"
 import * as integrantesSvc from "../../modules/emprendimientos/integrantes.service.js"
 import {
@@ -18,10 +19,11 @@ export const rutasEmprendimientos = Router()
 
 rutasEmprendimientos.use(requiereSesion)
 
-/** Listado de emprendimientos, con filtros. */
+/** Listado de emprendimientos, con filtros. Restringido por etapa si el usuario es responsable de alguna. */
 rutasEmprendimientos.get("/emprendimientos", requierePermiso("emprendimientos", "ver"), async (req, res) => {
   const filtros = filtrosEmprendimientosSchema.parse(req.query)
-  res.json(await emprendimientosSvc.listarEmprendimientos(filtros))
+  const idsEtapaResponsable = await etapasResponsableDe(req.usuario!.idUsuario)
+  res.json(await emprendimientosSvc.listarEmprendimientos(filtros, idsEtapaResponsable))
 })
 
 /** Crear un emprendimiento directamente, fuera del flujo de aprobar precandidato. */
@@ -32,7 +34,8 @@ rutasEmprendimientos.post("/emprendimientos", requierePermiso("emprendimientos",
 
 /** Detalle completo de un emprendimiento, incluida su ruta metodológica. */
 rutasEmprendimientos.get("/emprendimientos/:id", requierePermiso("emprendimientos", "ver"), async (req, res) => {
-  res.json(await emprendimientosSvc.obtenerDetalle(Number(req.params.id)))
+  const idsEtapaResponsable = await etapasResponsableDe(req.usuario!.idUsuario)
+  res.json(await emprendimientosSvc.obtenerDetalle(Number(req.params.id), idsEtapaResponsable))
 })
 
 /** Cambia el estado general del emprendimiento (activo/inactivo/terminado). */

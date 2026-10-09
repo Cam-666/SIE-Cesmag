@@ -1,6 +1,7 @@
 import { Router } from "express"
 import { requiereSesion } from "../../middleware/auth.js"
 import { requierePermiso } from "../../middleware/permisos.js"
+import { etapasResponsableDe } from "../../lib/alcanceResponsable.js"
 import * as entregablesSvc from "../../modules/entregables/entregables.service.js"
 import { filtrosEntregablesSchema, nuevoEntregableSchema, revisarEntregableSchema } from "../../modules/entregables/entregables.schemas.js"
 
@@ -13,20 +14,25 @@ rutasEntregables.get(
   "/emprendimientos/:id/fases/:idFase/entregables",
   requierePermiso("emprendimientos", "ver"),
   async (req, res) => {
-    res.json(await entregablesSvc.listarEntregablesPorFase(Number(req.params.id), Number(req.params.idFase)))
+    const idsEtapaResponsable = await etapasResponsableDe(req.usuario!.idUsuario)
+    res.json(
+      await entregablesSvc.listarEntregablesPorFase(Number(req.params.id), Number(req.params.idFase), idsEtapaResponsable),
+    )
   },
 )
 
-/** Listado general de entregables. */
+/** Listado general de entregables. Restringido por etapa si el usuario es responsable de alguna. */
 rutasEntregables.get("/entregables", requierePermiso("entregables", "ver"), async (req, res) => {
   const filtros = filtrosEntregablesSchema.parse(req.query)
-  res.json(await entregablesSvc.listarEntregables(filtros))
+  const idsEtapaResponsable = await etapasResponsableDe(req.usuario!.idUsuario)
+  res.json(await entregablesSvc.listarEntregables(filtros, idsEtapaResponsable))
 })
 
 /** Crea un entregable nuevo. */
 rutasEntregables.post("/entregables", requierePermiso("entregables", "anadir"), async (req, res) => {
   const payload = nuevoEntregableSchema.parse(req.body)
-  res.status(201).json(await entregablesSvc.crearEntregable(payload))
+  const idsEtapaResponsable = await etapasResponsableDe(req.usuario!.idUsuario)
+  res.status(201).json(await entregablesSvc.crearEntregable(payload, idsEtapaResponsable))
 })
 
 /**
@@ -49,17 +55,19 @@ rutasEntregables.get("/entregables/:id", async (req, res) => {
   const idEntregable = Number(req.params.id)
   const usuario = req.usuario!
 
+  let idsEtapaResponsable: number[] | undefined
   if (usuario.ambito === "admin") {
     const permiso = usuario.permisos.find((p) => p.modulo === "entregables")
     if (!permiso?.acciones.includes("ver")) {
       res.status(403).json({ message: "No tiene permiso para realizar esta acción." })
       return
     }
+    idsEtapaResponsable = await etapasResponsableDe(usuario.idUsuario)
   } else {
     await entregablesSvc.verificarPropiedadEmprendedor(idEntregable, usuario.idUsuario)
   }
 
-  res.json(await entregablesSvc.obtenerEntregable(idEntregable))
+  res.json(await entregablesSvc.obtenerEntregable(idEntregable, idsEtapaResponsable))
 })
 
 /** Revisión (aprobar/rechazar) del último intento — exclusivo del portal admin. */
@@ -73,17 +81,19 @@ rutasEntregables.get("/entregables/:id/evidencia-url", async (req, res) => {
   const idEntregable = Number(req.params.id)
   const usuario = req.usuario!
 
+  let idsEtapaResponsable: number[] | undefined
   if (usuario.ambito === "admin") {
     const permiso = usuario.permisos.find((p) => p.modulo === "entregables")
     if (!permiso?.acciones.includes("ver")) {
       res.status(403).json({ message: "No tiene permiso para realizar esta acción." })
       return
     }
+    idsEtapaResponsable = await etapasResponsableDe(usuario.idUsuario)
   } else {
     await entregablesSvc.verificarPropiedadEmprendedor(idEntregable, usuario.idUsuario)
   }
 
-  res.json(await entregablesSvc.obtenerUrlEvidencia(idEntregable))
+  res.json(await entregablesSvc.obtenerUrlEvidencia(idEntregable, idsEtapaResponsable))
 })
 
 // No hay DELETE — un entregable rechazado se vuelve a intentar, nunca se
